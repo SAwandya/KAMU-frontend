@@ -1,0 +1,111 @@
+import { Restaurant } from "@/types";
+
+export const restaurants: Restaurant[] = [
+  {
+    id: "1",
+    name: "Burger King",
+    image: "https://via.placeholder.com/400",
+    imageSource: require("@/assets/data/r1.jpeg"),
+    rating: 4.5,
+    deliveryTime: "20-30",
+    category: "Fast Food",
+    description: "Home of the Whopper & more",
+  },
+  {
+    id: "2",
+    name: "Pizza Hut",
+    image: "https://via.placeholder.com/400",
+    imageSource: require("@/assets/data/r2.jpeg"),
+    rating: 4.3,
+    deliveryTime: "25-35",
+    category: "Pizza",
+    description: "Signature pan pizzas & Italian classics",
+  },
+  {
+    id: "3",
+    name: "Subway",
+    image: "https://via.placeholder.com/400",
+    imageSource: require("@/assets/data/r3.jpeg"),
+    rating: 4.2,
+    deliveryTime: "15-25",
+    category: "Sandwiches",
+    description: "Fresh & customizable subs made your way",
+  },
+  {
+    id: "4",
+    name: "Taco Bell",
+    image:
+      "https://images.unsplash.com/photo-1565299507177-b0ac66763828?q=80&w=1664&auto=format&fit=crop",
+    imageSource: require("@/assets/data/r3.jpeg"),
+    rating: 4.1,
+    deliveryTime: "20-30",
+    category: "Mexican",
+    description: "Craveable Mexican-inspired favorites",
+  },
+  {
+    id: "5",
+    name: "Starbucks",
+    image:
+      "https://images.unsplash.com/photo-1506372023823-741c83b836fe?q=80&w=1770&auto=format&fit=crop",
+    imageSource: require("@/assets/data/r3.jpeg"),
+    rating: 4.7,
+    deliveryTime: "10-20",
+    category: "Coffee & Bakery",
+    description: "Premium coffees, teas and fresh-baked goods",
+  },
+  {
+    id: "6",
+    name: "Panda Express",
+    image:
+      "https://images.unsplash.com/photo-1585032226651-759b368d7246?q=80&w=1740&auto=format&fit=crop",
+    imageSource: require("@/assets/data/r3.jpeg"),
+    rating: 4.0,
+    deliveryTime: "20-35",
+    category: "Chinese",
+    description: "American Chinese cuisine with bold flavors",
+  },
+  {
+    id: "7",
+    name: "Sushi Palace",
+    image:
+      "https://images.unsplash.com/photo-1553621042-f6e147245754?q=80&w=1725&auto=format&fit=crop",
+    imageSource: require("@/assets/data/r3.jpeg"),
+    rating: 4.8,
+    deliveryTime: "30-45",
+    category: "Japanese",
+    description: "Fresh sushi, sashimi and Japanese delicacies",
+  },
+  {
+    id: "8",
+    name: "Olive Garden",
+    image:
+      "https://images.unsplash.com/photo-1595295333158-4742f28fbd85?q=80&w=1780&auto=format&fit=crop",
+    imageSource: require("@/assets/data/r3.jpeg"),
+    rating: 4.4,
+    deliveryTime: "35-50",
+    category: "Italian",
+    description: "Classic Italian pasta, breadsticks & more",
+  },
+  {
+    id: "9",
+    name: "Chipotle",
+    image:
+      "https://images.unsplash.com/photo-1568044852337-9bafe0c75918?q=80&w=1738&auto=format&fit=crop",
+    imageSource: require("@/assets/data/r3.jpeg"),
+    rating: 4.6,
+    deliveryTime: "15-25",
+    category: "Mexican",
+    description: "Build-your-own burritos, bowls & tacos",
+  },
+  {
+    id: "10",
+    name: "KFC",
+    image:
+      "https://images.unsplash.com/photo-1584269600464-37b1b58a9fe7?q=80&w=1771&auto=format&fit=crop",
+    imageSource: require("@/assets/data/r3.jpeg"),
+    rating: 4.2,
+    deliveryTime: "20-35",
+    category: "Fast Food",
+    description: "Original recipe fried chicken & Southern sides",
+  },
+];

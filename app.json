@@ -1,0 +1,56 @@
+{
+  "expo": {
+    "name": "Kamu.Lk",
+    "slug": "KamuLk",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/kamu-icon.png",
+    "scheme": "kamu",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/images/kamu-splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FF7A00"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "UIBackgroundModes": [
+          "location",
+          "fetch",
+          "remote-notification"
+        ]
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/kamu-adaptive-icon.png",
+        "backgroundColor": "#FF7A00"
+      },
+      "permissions": [
+        "ACCESS_BACKGROUND_LOCATION",
+        "ACCESS_FINE_LOCATION"
+      ]
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/images/kamu-favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow Kamu.Lk to use your location for order tracking."
+        }
+      ],
+      "expo-font",
+      "expo-secure-store"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
