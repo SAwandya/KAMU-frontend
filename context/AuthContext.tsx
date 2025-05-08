@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
+import authService from "@/services/authService";
 
 // Define the user type
 type User = {
@@ -75,25 +76,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   // Sign up function
-  const signUp = async (name: string, email: string, password: string) => {
+  const signUp = async (
+    name: string,
+    email: string,
+    password: string,
+    role: string
+  ) => {
     try {
       setIsLoading(true);
 
-      // In a real app, you would make an API call to your backend
-      // For now, we'll simulate a successful registration
-      const mockUser: User = {
-        id: "1",
-        name: name,
+      const res = authService.register({
+        fullName: name,
         email: email,
+        password: password,
         role: "customer",
-      };
+      });
+
+      console.log("Registration response:", res);
 
       // Save user to storage
-      await AsyncStorage.setItem("user", JSON.stringify(mockUser));
-      setUser(mockUser);
+      await AsyncStorage.setItem("user", JSON.stringify(res));
+      setUser(res);
 
       // Navigate to the main app
-      router.replace("/(app)");
+      // router.replace("/(app)");
     } catch (error) {
       console.error("Sign up failed", error);
       throw error;

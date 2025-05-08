@@ -38,15 +38,19 @@ const authService = {
 
   register: async (
     userData: {
-      username: string;
+      fullName: string;
       email: string;
       password: string;
+      role: string;
     } & LoginCredentials
   ) => {
     const response = await apiClient.post<{ user: User; token: string }>(
-      "/auth/register",
+      "/auth/register/customer",
       userData
     );
+
+    console.log("Registration response:", response);
+
     return response.data;
   },
 
