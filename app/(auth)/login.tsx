@@ -13,7 +13,7 @@ import {
   Platform,
   ScrollView,
 } from "react-native";
-import { Link } from "expo-router";
+import { Link, useRouter } from "expo-router";
 import { useAuth } from "../../context/AuthContext";
 import theme from "../../constants/Theme";
 import { Ionicons } from "@expo/vector-icons";
@@ -25,6 +25,7 @@ export default function Login() {
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { signIn } = useAuth();
+  const router = useRouter();
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -37,10 +38,16 @@ export default function Login() {
       setIsSubmitting(true);
       await signIn(email, password);
     } catch (error) {
-      setError("Invalid email or password");
+      setError(
+        "Invalid email or password. If problems persist, check connection diagnostics."
+      );
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const goToDiagnostics = () => {
+    router.push("/(auth)/debug");
   };
 
   return (
@@ -177,6 +184,18 @@ export default function Login() {
                 </TouchableOpacity>
               </Link>
             </View>
+
+            <TouchableOpacity
+              style={styles.diagnosticsButton}
+              onPress={goToDiagnostics}
+            >
+              <Ionicons
+                name="construct-outline"
+                size={16}
+                color={theme.palette.neutral.mediumGrey}
+              />
+              <Text style={styles.diagnosticsText}>Connection Diagnostics</Text>
+            </TouchableOpacity>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -331,5 +350,15 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.fontSize.md,
     color: theme.palette.primary.main,
     fontWeight: "bold",
+  },
+  diagnosticsButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: theme.spacing.md,
+  },
+  diagnosticsText: {
+    marginLeft: theme.spacing.xs,
+    color: theme.palette.neutral.mediumGrey,
+    fontSize: theme.typography.fontSize.sm,
   },
 });

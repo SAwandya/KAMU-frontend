@@ -1,65 +1,163 @@
 // services/restaurantService.ts
-import { Restaurant } from "../types";
+import apiClient from "./apiClient";
 
-// Mock data for restaurants
-const restaurants: Restaurant[] = [
-  {
-    id: "1",
-    name: "Burger King",
-    image: "https://via.placeholder.com/400",
-    rating: 4.2,
-    category: "Fast Food",
-    address: "123 Main St, Colombo",
-    description:
-      "Home of the Whopper and more. Enjoy flame-grilled burgers, crispy fries, and refreshing drinks.",
-    deliveryTime: "20-30",
-    dishes: [
-      {
-        id: "d1",
-        name: "Whopper",
-        description:
-          "A ¼ lb of flame-grilled beef with juicy tomatoes, crisp lettuce, creamy mayonnaise, ketchup, crunchy pickles, and sliced white onions on a toasted sesame seed bun.",
-        price: 5.99,
-        image: "https://via.placeholder.com/200",
-      },
-      {
-        id: "d2",
-        name: "Chicken Sandwich",
-        description:
-          "Our Original Chicken Sandwich is made with white meat chicken, lightly breaded and topped with a simple combination of shredded lettuce and creamy mayonnaise on a sesame seed bun.",
-        price: 4.99,
-        image: "https://via.placeholder.com/200",
-      },
-      {
-        id: "d3",
-        name: "French Fries",
-        description:
-          "Golden, crispy, and piping hot. Our French fries are salted to perfection.",
-        price: 2.49,
-        image: "https://via.placeholder.com/200",
-      },
-    ],
+export interface Restaurant {
+  id: string | number;
+  ownerId?: string | number;
+  name: string;
+  address: string;
+  images: string | string[];
+  isAvailable: boolean;
+  status: string;
+}
+
+export interface FoodItem {
+  id: string | number;
+  restaurantId: string | number;
+  name: string;
+  description: string;
+  price: number;
+  prepareTime: number;
+  isPromotion: boolean;
+  image?: string;
+}
+
+export interface WorkDay {
+  id: number | string;
+  day: string;
+}
+
+export interface WorkHours {
+  id: number | string;
+  startTime: string;
+  endTime: string;
+}
+
+export interface RestaurantSchedule {
+  id: number | string;
+  restaurantId: number | string;
+  workDayId: number | string;
+  workHoursId: number | string;
+  workDay?: WorkDay;
+  workHours?: WorkHours;
+}
+
+// Restaurant API service
+const restaurantService = {
+  // Restaurant related endpoints
+  registerRestaurant: async (
+    restaurantData: Omit<Restaurant, "id" | "status" | "isAvailable">
+  ): Promise<Restaurant> => {
+    const response = await apiClient.post<{ restaurant: Restaurant }>(
+      "/restaurant",
+      restaurantData
+    );
+    return response.data.restaurant;
   },
-  // Add more restaurants as needed
-];
 
-export const getAllRestaurants = async (): Promise<Restaurant[]> => {
-  // Simulate API call
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve(restaurants);
-    }, 500);
-  });
+  getMyRestaurant: async (): Promise<Restaurant> => {
+    const response = await apiClient.get<{ restaurant: Restaurant }>(
+      "/restaurant/me"
+    );
+    return response.data.restaurant;
+  },
+
+  updateRestaurant: async (
+    id: string | number,
+    data: Partial<Restaurant>
+  ): Promise<Restaurant> => {
+    const response = await apiClient.put<{ restaurant: Restaurant }>(
+      `/restaurant/${id}`,
+      data
+    );
+    return response.data.restaurant;
+  },
+
+  approveRestaurant: async (id: string | number): Promise<Restaurant> => {
+    const response = await apiClient.put<{ restaurant: Restaurant }>(
+      `/restaurant/${id}/approve`
+    );
+    return response.data.restaurant;
+  },
+
+  deleteRestaurant: async (id: string | number): Promise<void> => {
+    await apiClient.delete(`/restaurant/${id}`);
+  },
+
+  // Food item related endpoints
+  addFoodItem: async (itemData: Omit<FoodItem, "id">): Promise<FoodItem> => {
+    const response = await apiClient.post<{ foodItem: FoodItem }>(
+      "/restaurant/menu",
+      itemData
+    );
+    return response.data.foodItem;
+  },
+
+  getFoodItems: async (): Promise<FoodItem[]> => {
+    const response = await apiClient.get<{ foodItems: FoodItem[] }>(
+      "/restaurant/menu"
+    );
+    return response.data.foodItems;
+  },
+
+  updateFoodItem: async (
+    id: string | number,
+    data: Partial<FoodItem>
+  ): Promise<FoodItem> => {
+    const response = await apiClient.put<{ foodItem: FoodItem }>(
+      `/restaurant/menu/${id}`,
+      data
+    );
+    return response.data.foodItem;
+  },
+
+  deleteFoodItem: async (id: string | number): Promise<void> => {
+    await apiClient.delete(`/restaurant/menu/${id}`);
+  },
+
+  // Schedule related endpoints
+  getWorkDays: async (): Promise<WorkDay[]> => {
+    const response = await apiClient.get<{ workDays: WorkDay[] }>(
+      "/restaurant/work-days"
+    );
+    return response.data.workDays;
+  },
+
+  getWorkHours: async (): Promise<WorkHours[]> => {
+    const response = await apiClient.get<{ workHours: WorkHours[] }>(
+      "/restaurant/work-hours"
+    );
+    return response.data.workHours;
+  },
+
+  addSchedule: async (
+    workDayId: number | string,
+    workHoursId: number | string
+  ): Promise<RestaurantSchedule> => {
+    const response = await apiClient.post<{ schedule: RestaurantSchedule }>(
+      "/restaurant/schedules",
+      {
+        workDayId,
+        workHoursId,
+      }
+    );
+    return response.data.schedule;
+  },
+
+  getMySchedule: async (): Promise<RestaurantSchedule[]> => {
+    const response = await apiClient.get<{ schedule: RestaurantSchedule[] }>(
+      "/restaurant/schedules"
+    );
+    return response.data.schedule;
+  },
+
+  // Restaurant orders endpoints
+  getRestaurantOrders: async (): Promise<any[]> => {
+    const response = await apiClient.get<{ orders: any[] }>(
+      "/restaurant/orders"
+    );
+    return response.data.orders;
+  },
 };
 
-export const getRestaurantById = async (
-  id: string
-): Promise<Restaurant | null> => {
-  // Simulate API call
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      const restaurant = restaurants.find((r) => r.id === id) || null;
-      resolve(restaurant);
-    }, 500);
-  });
-};
+export default restaurantService;

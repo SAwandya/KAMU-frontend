@@ -1,61 +1,69 @@
-import { Stack } from "expo-router";
+import React, { useEffect } from "react";
+import { Redirect, Stack, router } from "expo-router";
+import { useAuthContext } from "../../context/AuthContext";
+import { ActivityIndicator, View } from "react-native";
 import theme from "@/constants/Theme";
 
 export default function AppLayout() {
+  const { isAuthenticated, isLoading } = useAuthContext();
+
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      // If not authenticated and not loading, redirect to login
+      router.replace("/(auth)/login");
+    }
+  }, [isAuthenticated, isLoading]);
+
+  if (isLoading) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+          backgroundColor: theme.palette.neutral.background,
+        }}
+      >
+        <ActivityIndicator size="large" color={theme.palette.primary.main} />
+      </View>
+    );
+  }
+
+  if (!isAuthenticated) {
+    // This ensures we don't render anything while redirecting
+    return <Redirect href="/(auth)/login" />;
+  }
+
+  // User is authenticated, render the app layout
   return (
     <Stack
       screenOptions={{
-        headerShown: false,
-        contentStyle: { backgroundColor: theme.palette.neutral.background },
-        animation: "slide_from_right",
+        headerShown: true,
+        headerStyle: { backgroundColor: theme.palette.primary.main },
+        headerTintColor: theme.palette.neutral.white,
+        headerTitleStyle: { fontWeight: "bold" },
       }}
     >
-      <Stack.Screen name="(tabs)" />
-      <Stack.Screen name="restaurant/[id]" />
-
+      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen
-        options={{ headerShown: false, title: "Promo Details" }}
-        name="promotion/[promoId]"
-      />
-
-      {/* Payment screens must be properly defined */}
-      <Stack.Screen
-        name="(app)/payment/select-payment"
+        name="restaurant/[id]"
         options={{
           headerShown: false,
-          animation: "slide_from_bottom",
-        }}
-      />
-
-      <Stack.Screen
-        name="(app)/payment/process"
-        options={{
-          headerShown: false,
-          animation: "fade",
-        }}
-      />
-
-      <Stack.Screen
-        name="(app)/account/payment-methods"
-        options={{
-          headerShown: false,
-          animation: "slide_from_right",
+          presentation: "modal",
         }}
       />
       <Stack.Screen
-        name="(app)/personalInfo/userEditScreen"
+        name="payment/process"
         options={{
-          headerShown: false,
-          animation: "slide_from_right",
+          title: "Processing Payment",
+          headerShown: true,
         }}
       />
-
-      {/* Add order tracking screen */}
       <Stack.Screen
-        name="order-tracking"
+        name="payment/select-payment"
         options={{
-          headerShown: false,
-          animation: "slide_from_right",
+          title: "Select Payment Method",
+          headerShown: true,
         }}
       />
     </Stack>
