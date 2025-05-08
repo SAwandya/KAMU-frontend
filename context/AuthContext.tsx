@@ -52,18 +52,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       setIsLoading(true);
 
-      // In a real app, you would make an API call to your backend
-      // For now, we'll simulate a successful login
-      const mockUser: User = {
-        id: "1",
-        name: "John Doe",
-        email: email,
-        role: "customer",
-      };
+      const res = await authService.login(email, password);
+      console.log("Login response:", res);
 
       // Save user to storage
-      await AsyncStorage.setItem("user", JSON.stringify(mockUser));
-      setUser(mockUser);
+      await AsyncStorage.setItem("user", JSON.stringify(res));
+      setUser(res);
 
       // Navigate to the main app
       router.replace("/(app)");
