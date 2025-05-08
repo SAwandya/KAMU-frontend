@@ -31,6 +31,12 @@ interface ToastContextType {
   hideToast: (id: string) => void;
 }
 
+// Helper function to strip HTML tags from a string
+const stripHtmlTags = (html: string): string => {
+  if (!html) return "";
+  return html.replace(/<[^>]*>/g, "");
+};
+
 const ToastContext = createContext<ToastContextType | undefined>(undefined);
 
 export const useToast = () => {
@@ -53,7 +59,13 @@ export const ToastProvider = ({ children }: ToastProviderProps) => {
     (message: string, type: ToastType = "info", duration = 3000) => {
       const id = Math.random().toString(36).substring(2, 9);
 
-      setToasts((prev) => [...prev, { id, message, type, duration }]);
+      // Clean message by removing HTML tags
+      const cleanMessage = stripHtmlTags(message);
+
+      setToasts((prev) => [
+        ...prev,
+        { id, message: cleanMessage, type, duration },
+      ]);
 
       // Auto-hide the toast after specified duration
       if (duration > 0) {

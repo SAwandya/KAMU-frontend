@@ -31,57 +31,57 @@ interface Environments {
 // Define all environment configurations
 const environments: Environments = {
   development: {
-    baseUrl: "http://localhost:80/api",
+    baseUrl: "http://localhost:80",
     endpoints: {
-      auth: "/auth",
-      restaurants: "/restaurants",
-      users: "/users",
-      orders: "/orders",
-      delivery: "/delivery",
-      payment: "/payment",
-      promotion: "/promotion",
+      auth: "/api/auth",
+      restaurants: "/api/restaurant",
+      users: "/api/users",
+      orders: "/api/orders",
+      delivery: "/api/trips",
+      payment: "/api/payments",
+      promotion: "/api/promotion",
     },
   },
   staging: {
-    baseUrl: "https://staging-api.kamuapp.com/api",
+    baseUrl: "https://staging-api.kamuapp.com",
     endpoints: {
-      auth: "/auth",
-      restaurants: "/restaurants",
-      users: "/users",
-      orders: "/orders",
-      delivery: "/delivery",
-      payment: "/payment",
-      promotion: "/promotion",
+      auth: "/api/auth",
+      restaurants: "/api/restaurant",
+      users: "/api/users",
+      orders: "/api/orders",
+      delivery: "/api/trips",
+      payment: "/api/payments",
+      promotion: "/api/promotion",
     },
   },
   production: {
-    baseUrl: "https://api.kamuapp.com/api",
+    baseUrl: "https://api.kamuapp.com",
     endpoints: {
-      auth: "/auth",
-      restaurants: "/restaurants",
-      users: "/users",
-      orders: "/orders",
-      delivery: "/delivery",
-      payment: "/payment",
-      promotion: "/promotion",
+      auth: "/api/auth",
+      restaurants: "/api/restaurant",
+      users: "/api/users",
+      orders: "/api/orders",
+      delivery: "/api/trips",
+      payment: "/api/payments",
+      promotion: "/api/promotion",
     },
   },
   local: {
     // Fixed IP address that matches your computer's WiFi IP
-    baseUrl: "http://192.168.8.160:80/api",
+    baseUrl: "http://192.168.8.160:80",
     endpoints: {
-      auth: "/auth",
-      restaurants: "/restaurants",
-      users: "/users",
-      orders: "/orders",
-      delivery: "/delivery",
-      payment: "/payment",
-      promotion: "/promotion",
+      auth: "/api/auth",
+      restaurants: "/api/restaurant",
+      users: "/api/users",
+      orders: "/api/orders",
+      delivery: "/api/trips",
+      payment: "/api/payments",
+      promotion: "/api/promotion",
     },
   },
 };
 
-// Set the active environment
+// Set the active environment - try using local since your Kubernetes services are running there
 const activeEnvironment = "local";
 
 // Export the active configuration

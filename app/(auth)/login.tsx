@@ -36,7 +36,11 @@ export default function Login() {
     try {
       setError("");
       setIsSubmitting(true);
-      await signIn(email, password);
+      const success = await signIn(email, password);
+      if (success) {
+        // Navigate to home page after successful login
+        router.replace("/(app)");
+      }
     } catch (error) {
       setError(
         "Invalid email or password. If problems persist, check connection diagnostics."
