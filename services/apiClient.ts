@@ -55,6 +55,13 @@ const getApiUrl = () => {
     }
   }
 
+  // Ensure port number is included
+  if (!url.match(/:\d+$/)) {
+    // If no port is specified in the URL, add default port 80
+    url = `${url}:80`;
+    console.log(`🔌 Added default port 80 to URL: ${url}`);
+  }
+
   return url;
 };
 
@@ -73,7 +80,7 @@ const apiClient = axios.create({
     "Content-Type": "application/json",
     Accept: "application/json",
   },
-  timeout: 3000, // Default timeout of 10 seconds
+  timeout: 10000, // Increased timeout to 10 seconds for better reliability
 });
 
 // Network Logger
@@ -119,6 +126,7 @@ apiClient.interceptors.request.use(
     const token = await SecureStore.getItemAsync("accessToken");
 
     if (token) {
+      // Ensure we always set the Authorization header with the Bearer token
       config.headers.Authorization = `Bearer ${token}`;
       // Add logging for debugging token issues
       if (enableNetworkLogging) {

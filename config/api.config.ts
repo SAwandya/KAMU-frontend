@@ -68,7 +68,7 @@ const environments: Environments = {
   },
   local: {
     // Fixed IP address that matches your computer's WiFi IP
-    baseUrl: "http://192.168.66.33:80",
+    baseUrl: "http://192.168.213.33:80",
     endpoints: {
       auth: "/api/auth",
       restaurants: "/api/restaurant",

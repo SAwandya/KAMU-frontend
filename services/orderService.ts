@@ -50,12 +50,23 @@ const orderService = {
     orderData: Omit<Order, "id" | "createdAt" | "updatedAt" | "status">
   ): Promise<Order> => {
     try {
-      // The apiClient interceptor will automatically add the auth token
-      console.log("Creating order...");
+      console.log("Creating order with data:", JSON.stringify(orderData));
 
+      // Ensure we have the auth token
+      const token = await SecureStore.getItemAsync("accessToken");
+      if (!token) {
+        throw new Error("Authentication required to place an order");
+      }
+
+      // POST request to create order
       const response = await apiClient.post<{ message: string; order: Order }>(
         `${ORDERS_PATH}`,
-        orderData
+        orderData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`, // Explicitly set token for this critical request
+          },
+        }
       );
 
       console.log("Order created successfully:", response.data.order.id);
@@ -69,6 +80,7 @@ const orderService = {
   // Get an order by ID
   getOrderById: async (orderId: number | string): Promise<Order> => {
     try {
+      // GET request to fetch order
       const response = await apiClient.get<Order>(`${ORDERS_PATH}/${orderId}`);
       return response.data;
     } catch (error) {
@@ -80,6 +92,7 @@ const orderService = {
   // Get the customer's latest order
   getLatestOrder: async (): Promise<Order> => {
     try {
+      // GET request to fetch latest order
       const response = await apiClient.get<Order>(`${ORDERS_PATH}/latest`);
       return response.data;
     } catch (error) {
@@ -94,9 +107,21 @@ const orderService = {
     updateData: Partial<Order>
   ): Promise<{ message: string; order: Order }> => {
     try {
+      // Ensure we have the auth token
+      const token = await SecureStore.getItemAsync("accessToken");
+      if (!token) {
+        throw new Error("Authentication required to update an order");
+      }
+
+      // PUT request to update order
       const response = await apiClient.put<{ message: string; order: Order }>(
         `${ORDERS_PATH}/${orderId}`,
-        updateData
+        updateData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`, // Explicitly set token for this critical request
+          },
+        }
       );
       return response.data;
     } catch (error) {
@@ -112,12 +137,14 @@ const orderService = {
     serviceToken: string
   ): Promise<{ message: string; order: Order }> => {
     try {
+      // PUT request to update order from service
       const response = await apiClient.put<{ message: string; order: Order }>(
         `${ORDERS_PATH}/service/${orderId}`,
         updateData,
         {
           headers: {
             "x-service-token": serviceToken,
+            Authorization: `Bearer ${serviceToken}`, // Include authorization header
           },
         }
       );
@@ -133,6 +160,7 @@ const orderService = {
     orderId: number | string
   ): Promise<{ message: string; order: Order }> => {
     try {
+      // Use PUT request to update order status to CANCELLED
       return orderService.updateOrder(orderId, {
         status: ORDER_STATUS.CANCELLED,
       });
@@ -154,16 +182,40 @@ const orderService = {
     totalPages: number;
   }> => {
     try {
+      // Ensure we have the auth token
+      const token = await SecureStore.getItemAsync("accessToken");
+      if (!token) {
+        throw new Error("Authentication required to view orders");
+      }
+
       let url = `${ORDERS_PATH}/customer?page=${page}&limit=${limit}`;
       if (status) {
         url += `&status=${status}`;
       }
 
-      // The apiClient interceptor will automatically add the auth token
-      const response = await apiClient.get(url);
+      // GET request to fetch customer orders
+      const response = await apiClient.get(url, {
+        headers: {
+          Authorization: `Bearer ${token}`, // Explicitly set token for this request
+        },
+      });
       return response.data;
     } catch (error) {
       console.error("Failed to get customer orders:", error);
+      throw error;
+    }
+  },
+
+  // Track an order
+  trackOrder: async (orderId: number | string): Promise<Order> => {
+    try {
+      // GET request to track order
+      const response = await apiClient.get<Order>(
+        `${ORDERS_PATH}/track/${orderId}`
+      );
+      return response.data;
+    } catch (error) {
+      console.error(`Failed to track order ${orderId}:`, error);
       throw error;
     }
   },
