@@ -3,171 +3,210 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
-  StatusBar,
-  TouchableOpacity,
+  ActivityIndicator,
+  Animated,
+  Easing,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import theme from "@/constants/Theme";
-import { processPayment, PAYMENT_METHODS } from "@/services/paymentService";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useCart } from "@/hooks/useCart";
-import PaymentStatusIndicator from "@/components/Payment/PaymentStatusIndicator";
+import { Ionicons } from "@expo/vector-icons";
+import theme from "../../../constants/Theme";
 
-const PaymentProcessingScreen = () => {
-  const router = useRouter();
-  const {
-    totalAmount,
-    paymentMethod,
-    paymentMethodId,
-    restaurantId,
-    items: itemsParam,
-  } = useLocalSearchParams();
-
-  const [status, setStatus] = useState<"processing" | "success" | "failed">(
-    "processing"
-  );
-  const [transactionId, setTransactionId] = useState<string>("");
-  const [orderId, setOrderId] = useState<string>("");
-  const [error, setError] = useState<string | null>(null);
-  const { clearCart } = useCart();
-
-  // Parse items from params
-  const items = itemsParam
-    ? typeof itemsParam === "string"
-      ? JSON.parse(itemsParam)
-      : itemsParam
-    : [];
-
-  useEffect(() => {
-    const processOrder = async () => {
-      // Wait a moment to show the processing animation
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-
-      try {
-        // Generate a new order ID
-        const newOrderId = `order_${Math.random()
-          .toString(36)
-          .substring(2, 15)}`;
-        setOrderId(newOrderId);
-
-        // Process payment
-        const paymentResult = await processPayment(
-          Number(totalAmount),
-          paymentMethodId as string,
-          newOrderId
-        );
-
-        if (paymentResult.success) {
-          setTransactionId(paymentResult.transactionId || "");
-
-          // Create order
-          const order = {
-            id: newOrderId,
-            restaurantId,
-            items,
-            total: Number(totalAmount),
-            paymentMethod,
-            paymentMethodId,
-            transactionId: paymentResult.transactionId,
-            status: "preparing",
-            createdAt: new Date().toISOString(),
-          };
-
-          // Save order to AsyncStorage (for demo purposes)
-          const existingOrders = await AsyncStorage.getItem("orders");
-          const orders = existingOrders ? JSON.parse(existingOrders) : [];
-          orders.push(order);
-          await AsyncStorage.setItem("orders", JSON.stringify(orders));
-
-          // Clear cart
-          clearCart();
-
-          // Show success state
-          setStatus("success");
-        } else {
-          setError(paymentResult.error || "Payment processing failed");
-          setStatus("failed");
-        }
-      } catch (err) {
-        console.error("Error processing payment:", err);
-        setError("An unexpected error occurred");
-        setStatus("failed");
-      }
-    };
-
-    processOrder();
-  }, [
-    totalAmount,
-    paymentMethod,
-    paymentMethodId,
-    restaurantId,
-    items,
-    clearCart,
-  ]);
-
-  const handleContinue = () => {
-    if (status === "success") {
-      // Navigate to order tracking with the newly created order ID
-      router.replace(`/order-tracking?orderId=${orderId}`);
-    } else {
-      // Go back to payment selection
-      router.back();
-    }
-  };
-
-  return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="dark-content" />
-
-      <View style={styles.container}>
-        <PaymentStatusIndicator
-          status={status}
-          amount={totalAmount}
-          errorMessage={error || undefined}
-          transactionId={transactionId}
-        />
-
-        {(status === "success" || status === "failed") && (
-          <TouchableOpacity
-            style={styles.continueButton}
-            onPress={handleContinue}
-          >
-            <Text style={styles.continueButtonText}>
-              {status === "success" ? "Track Your Order" : "Try Again"}
-            </Text>
-          </TouchableOpacity>
-        )}
-      </View>
-    </SafeAreaView>
-  );
+// Payment processing states
+const PROCESSING_STATES = {
+  INITIALIZING: "Initializing payment",
+  PROCESSING: "Processing payment",
+  CONFIRMING: "Confirming order",
+  SUCCESS: "Payment successful!",
+  FAILED: "Payment failed",
 };
 
+export default function ProcessPaymentScreen() {
+  const router = useRouter();
+  const params = useLocalSearchParams<{
+    orderId: string;
+    paymentMethodId: string;
+  }>();
+
+  const [currentState, setCurrentState] = useState(
+    PROCESSING_STATES.INITIALIZING
+  );
+  const [isSuccess, setIsSuccess] = useState(false);
+  const [isError, setIsError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  const progressAnim = new Animated.Value(0);
+
+  // Simulate payment processing flow with staged animations
+  useEffect(() => {
+    // Step 1: Initializing
+    setTimeout(() => {
+      setCurrentState(PROCESSING_STATES.PROCESSING);
+      Animated.timing(progressAnim, {
+        toValue: 0.33,
+        duration: 800,
+        useNativeDriver: false,
+        easing: Easing.inOut(Easing.ease),
+      }).start();
+    }, 1500);
+
+    // Step 2: Processing
+    setTimeout(() => {
+      setCurrentState(PROCESSING_STATES.CONFIRMING);
+      Animated.timing(progressAnim, {
+        toValue: 0.66,
+        duration: 800,
+        useNativeDriver: false,
+        easing: Easing.inOut(Easing.ease),
+      }).start();
+    }, 3000);
+
+    // Step 3: Completing
+    setTimeout(() => {
+      // Random success/failure for demo
+      const success = Math.random() > 0.1; // 90% success rate
+
+      if (success) {
+        setCurrentState(PROCESSING_STATES.SUCCESS);
+        setIsSuccess(true);
+        Animated.timing(progressAnim, {
+          toValue: 1,
+          duration: 600,
+          useNativeDriver: false,
+          easing: Easing.inOut(Easing.ease),
+        }).start();
+
+        // Navigate to order tracking
+        setTimeout(() => {
+          router.replace({
+            pathname: "/order-tracking",
+            params: { orderId: params.orderId },
+          });
+        }, 1500);
+      } else {
+        setCurrentState(PROCESSING_STATES.FAILED);
+        setIsError(true);
+        setErrorMessage("Payment could not be processed. Please try again.");
+
+        // Navigate back to payment selection
+        setTimeout(() => {
+          router.back();
+        }, 2000);
+      }
+    }, 4500);
+  }, []);
+
+  // Progress bar width animation
+  const progressWidth = progressAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ["0%", "100%"],
+  });
+
+  return (
+    <View style={styles.container}>
+      <View style={styles.card}>
+        {/* Status Icon */}
+        <View
+          style={[
+            styles.iconContainer,
+            isSuccess && styles.successIconContainer,
+            isError && styles.errorIconContainer,
+          ]}
+        >
+          {isSuccess ? (
+            <Ionicons name="checkmark" size={40} color="white" />
+          ) : isError ? (
+            <Ionicons name="close" size={40} color="white" />
+          ) : (
+            <ActivityIndicator size="large" color="white" />
+          )}
+        </View>
+
+        {/* Status Text */}
+        <Text
+          style={[
+            styles.statusText,
+            isSuccess && styles.successText,
+            isError && styles.errorText,
+          ]}
+        >
+          {currentState}
+        </Text>
+
+        {/* Error Message */}
+        {isError && <Text style={styles.errorMessage}>{errorMessage}</Text>}
+
+        {/* Progress Bar (only show during processing) */}
+        {!isSuccess && !isError && (
+          <View style={styles.progressBarContainer}>
+            <Animated.View
+              style={[styles.progressBar, { width: progressWidth }]}
+            />
+          </View>
+        )}
+      </View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: theme.palette.neutral.background,
-  },
   container: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    padding: theme.spacing.xl,
+    backgroundColor: theme.palette.neutral.background,
+    padding: theme.spacing.lg,
   },
-  continueButton: {
-    backgroundColor: theme.palette.primary.main,
-    paddingVertical: theme.spacing.md,
-    paddingHorizontal: theme.spacing.xl,
+  card: {
+    backgroundColor: theme.palette.neutral.white,
     borderRadius: theme.borderRadius.md,
-    marginTop: theme.spacing.lg,
+    padding: theme.spacing.xl,
     width: "100%",
     alignItems: "center",
+    ...theme.shadows.md,
   },
-  continueButtonText: {
-    color: theme.palette.neutral.white,
-    fontSize: theme.typography.fontSize.md,
+  iconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: theme.palette.primary.main,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: theme.spacing.lg,
+  },
+  successIconContainer: {
+    backgroundColor: theme.palette.status.success,
+  },
+  errorIconContainer: {
+    backgroundColor: theme.palette.status.error,
+  },
+  statusText: {
+    fontSize: theme.typography.fontSize.xl,
     fontWeight: "600",
+    color: theme.palette.neutral.black,
+    marginBottom: theme.spacing.md,
+    textAlign: "center",
+  },
+  successText: {
+    color: theme.palette.status.success,
+  },
+  errorText: {
+    color: theme.palette.status.error,
+  },
+  errorMessage: {
+    color: theme.palette.neutral.darkGrey,
+    textAlign: "center",
+    marginBottom: theme.spacing.md,
+  },
+  progressBarContainer: {
+    height: 8,
+    backgroundColor: theme.palette.neutral.lightGrey,
+    borderRadius: 4,
+    width: "100%",
+    marginTop: theme.spacing.md,
+    overflow: "hidden",
+  },
+  progressBar: {
+    height: "100%",
+    backgroundColor: theme.palette.primary.main,
+    borderRadius: 4,
   },
 });
-
-export default PaymentProcessingScreen;

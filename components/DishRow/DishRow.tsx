@@ -16,8 +16,12 @@ const DishRow: React.FC<DishRowProps> = ({ dish, restaurantId }) => {
   const { addToCart, removeFromCart, getItemQuantity } = useCart();
   const quantity = getItemQuantity(dish.id);
 
+  // Ensure dish.price is a valid number
+  const dishPrice = typeof dish.price === "number" ? dish.price : 0;
+  const formattedPrice = dishPrice.toFixed(2);
+
   const handleAddToCart = () => {
-    addToCart({ ...dish, restaurantId });
+    addToCart({ ...dish, restaurantId, price: dishPrice });
   };
 
   const handleRemoveFromCart = () => {
@@ -36,7 +40,7 @@ const DishRow: React.FC<DishRowProps> = ({ dish, restaurantId }) => {
           <Text style={styles.description} numberOfLines={2}>
             {dish.description}
           </Text>
-          <Text style={styles.price}>${dish.price.toFixed(2)}</Text>
+          <Text style={styles.price}>${formattedPrice}</Text>
 
           {quantity > 0 && (
             <View style={styles.quantityBadge}>
@@ -111,7 +115,7 @@ const DishRow: React.FC<DishRowProps> = ({ dish, restaurantId }) => {
               onPress={() => setIsPressed(false)}
             >
               <Text style={styles.addToOrderText}>
-                Add to order • ${(quantity * dish.price).toFixed(2)}
+                Add to order • ${(quantity * dishPrice).toFixed(2)}
               </Text>
             </TouchableOpacity>
           )}

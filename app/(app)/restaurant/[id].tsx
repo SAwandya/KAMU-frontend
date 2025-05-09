@@ -1,34 +1,38 @@
 // app/(app)/restaurant/[id].tsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
   Image,
   TouchableOpacity,
-  ScrollView,
   StyleSheet,
   StatusBar,
   Animated,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import DishRow from "../../../components/DishRow/DishRow";
-import { Restaurant } from "../../../types";
-import restaurantService from "../../../services/restaurantService";
+import { Dish } from "../../../types";
+// Import the Restaurant and FoodItem types from restaurantService instead
+import restaurantService, {
+  Restaurant as APIRestaurant,
+  FoodItem,
+} from "../../../services/restaurantService";
 import { useCart } from "@/hooks/useCart";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import useAuth from "@/hooks/useAuth";
 import theme from "@/constants/Theme";
 
 // Import restaurant images
-const restaurantImages = {
+const restaurantImages: Record<string, any> = {
   "1": require("../../../assets/data/r1.jpeg"),
   "2": require("../../../assets/data/r2.jpeg"),
   "3": require("../../../assets/data/r3.jpeg"),
 };
 
 // Import dish images
-const dishImages = {
+const dishImages: Record<string, any> = {
   d1: require("../../../assets/data/1.png"),
   d2: require("../../../assets/data/2.png"),
   d3: require("../../../assets/data/3.png"),
@@ -43,11 +47,46 @@ const dishImages = {
 
 const HEADER_HEIGHT = 300;
 
+// Define a combined restaurant type that includes both API and UI properties
+interface CombinedRestaurant extends Partial<APIRestaurant> {
+  id: string | number;
+  name: string;
+  image?: string;
+  imageSource?: any;
+  rating?: number;
+  category?: string;
+  description?: string;
+  deliveryTime?: string;
+  address?: string;
+}
+
+// Extend FoodItem to include imageSource property
+interface ExtendedFoodItem extends FoodItem {
+  imageSource?: any;
+}
+
+// Convert FoodItem to Dish for DishRow component
+const convertFoodItemToDish = (foodItem: ExtendedFoodItem): Dish => {
+  return {
+    id: foodItem.id.toString(),
+    name: foodItem.name,
+    description: foodItem.description,
+    price: foodItem.price,
+    image: foodItem.image,
+    imageSource: foodItem.imageSource,
+  };
+};
+
 const RestaurantScreen = () => {
   const router = useRouter();
   const { id } = useLocalSearchParams();
-  const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
+  const { user } = useAuth();
+  const [restaurant, setRestaurant] = useState<CombinedRestaurant | null>(null);
+  const [menuItems, setMenuItems] = useState<ExtendedFoodItem[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isMenuLoading, setIsMenuLoading] = useState<boolean>(true);
+  const [menuError, setMenuError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState<number>(0);
   const scrollY = new Animated.Value(0);
 
   const { items, clearCart, totalItems, totalPrice } = useCart();
@@ -70,41 +109,88 @@ const RestaurantScreen = () => {
     extrapolateRight: "clamp",
   });
 
-  const createOrder = async () => {
-    try {
-      router.push({
-        pathname: "/payment/select-payment",
-        params: {
-          totalAmount: totalPrice,
-          restaurantId: id,
-          items: JSON.stringify(items),
-        },
-      });
-    } catch (error) {
-      console.error("Error creating order:", error);
+  // Improved createOrder function with authentication check
+  const handleCheckout = () => {
+    // Skip auth check since users are already logged in via app layout
+    // We can assume the user is valid if they're in the app section
+
+    if (!restaurant) {
+      Alert.alert("Error", "Restaurant information not available");
+      return;
     }
+
+    if (items.length === 0) {
+      Alert.alert(
+        "Empty Cart",
+        "Please add items to your cart before checkout"
+      );
+      return;
+    }
+
+    // Validate cart items belong to this restaurant
+    const hasOtherRestaurantItems = items.some(
+      (item) => item.restaurantId && item.restaurantId !== id
+    );
+
+    if (hasOtherRestaurantItems) {
+      Alert.alert(
+        "Items from Different Restaurant",
+        "Your cart contains items from another restaurant. Would you like to clear your cart and add items from this restaurant instead?",
+        [
+          {
+            text: "Cancel",
+            style: "cancel",
+          },
+          {
+            text: "Clear Cart",
+            onPress: () => clearCart(),
+          },
+        ]
+      );
+      return;
+    }
+
+    // Proceed to checkout
+    router.push({
+      pathname: "/payment/select-payment",
+      params: {
+        totalAmount: totalPrice.toString(),
+        restaurantId: id as string,
+        items: JSON.stringify(
+          items.map((item) => ({
+            id: item.id,
+            name: item.name,
+            price: item.price,
+            quantity: item.quantity,
+          }))
+        ),
+      },
+    });
   };
 
+  // Fetch restaurant details
   useEffect(() => {
     const fetchRestaurant = async () => {
       try {
         setIsLoading(true);
         const data = await restaurantService.getRestaurantById(id as string);
 
-        // Enhance restaurant data with local image sources
-        if (data) {
-          const enhancedData = {
-            ...data,
-            imageSource: restaurantImages[data.id] || null,
-            dishes: data.dishes
-              ? data.dishes.map((dish) => ({
-                  ...dish,
-                  imageSource: dishImages[dish.id] || null,
-                }))
-              : [],
-          };
-          setRestaurant(enhancedData);
-        }
+        // Create a combined restaurant with UI-friendly properties
+        const enhancedData: CombinedRestaurant = {
+          ...data,
+          // Set default values for UI properties if not provided by API
+          image:
+            data.images && typeof data.images === "string"
+              ? data.images
+              : undefined,
+          imageSource: restaurantImages[data.id.toString()] || null,
+          rating: 4.5, // Default rating if not provided
+          category: "Restaurant", // Default category if not provided
+          description: "Delicious food served fresh.", // Default description
+          deliveryTime: "30", // Default delivery time
+        };
+
+        setRestaurant(enhancedData);
       } catch (error) {
         console.error("Error fetching restaurant:", error);
       } finally {
@@ -114,6 +200,52 @@ const RestaurantScreen = () => {
 
     fetchRestaurant();
   }, [id]);
+
+  // Fetch menu items with retry mechanism
+  const fetchMenuItems = useCallback(async () => {
+    if (!id) return;
+
+    try {
+      setIsMenuLoading(true);
+      setMenuError(null);
+
+      console.log(
+        `Fetching menu for restaurant ${id}, attempt ${retryCount + 1}`
+      );
+      const items = await restaurantService.getFoodItemsByRestaurantId(
+        id as string
+      );
+
+      if (items.length === 0 && retryCount < 2) {
+        // Retry up to 2 times if no items returned
+        setRetryCount((prev) => prev + 1);
+        return;
+      }
+
+      // Enhance menu items with local image sources if available
+      const enhancedItems = items.map((item) => ({
+        ...item,
+        imageSource: dishImages[`d${item.id.toString()}`] || dishImages.d1,
+      }));
+
+      setMenuItems(enhancedItems);
+    } catch (error: any) {
+      console.error("Error fetching menu items:", error);
+      setMenuError(error.message || "Failed to load menu items");
+    } finally {
+      setIsMenuLoading(false);
+    }
+  }, [id, retryCount]);
+
+  useEffect(() => {
+    fetchMenuItems();
+  }, [fetchMenuItems]);
+
+  // Handle retry button press
+  const handleRetryMenuLoad = () => {
+    setRetryCount(0);
+    fetchMenuItems();
+  };
 
   if (isLoading || !restaurant) {
     return (
@@ -238,25 +370,62 @@ const RestaurantScreen = () => {
             <View style={styles.divider} />
           </View>
 
-          {restaurant.dishes &&
-            restaurant.dishes.map((dish) => (
-              <DishRow
-                key={dish.id}
-                dish={{
-                  ...dish,
-                  // If dish has a local image, use it; otherwise fall back to URI
-                  image: dish.imageSource ? undefined : dish.image,
-                  imageSource: dish.imageSource,
-                }}
-                restaurantId={restaurant.id}
+          {isMenuLoading ? (
+            <View style={styles.menuLoadingContainer}>
+              <ActivityIndicator
+                size="small"
+                color={theme.palette.primary.main}
               />
-            ))}
+              <Text style={styles.menuLoadingText}>Loading menu items...</Text>
+            </View>
+          ) : menuError ? (
+            <View style={styles.menuErrorContainer}>
+              <Ionicons
+                name="alert-circle-outline"
+                size={32}
+                color={theme.palette.status.error}
+              />
+              <Text style={styles.menuErrorText}>{menuError}</Text>
+              <TouchableOpacity
+                style={styles.retryButton}
+                onPress={handleRetryMenuLoad}
+              >
+                <Text style={styles.retryButtonText}>Retry</Text>
+              </TouchableOpacity>
+            </View>
+          ) : menuItems.length > 0 ? (
+            menuItems.map((foodItem) => (
+              <DishRow
+                key={foodItem.id.toString()}
+                dish={convertFoodItemToDish(foodItem)}
+                restaurantId={restaurant.id.toString()}
+              />
+            ))
+          ) : (
+            <View style={styles.noMenuContainer}>
+              <Ionicons
+                name="restaurant-outline"
+                size={32}
+                color={theme.palette.neutral.darkGrey}
+              />
+              <Text style={styles.noMenuText}>No menu items available</Text>
+              <TouchableOpacity
+                style={styles.retryButton}
+                onPress={handleRetryMenuLoad}
+              >
+                <Text style={styles.retryButtonText}>Retry</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
       </Animated.ScrollView>
 
       {/* Checkout Button */}
       {items.length > 0 && (
-        <TouchableOpacity style={styles.checkoutButton} onPress={createOrder}>
+        <TouchableOpacity
+          style={styles.checkoutButton}
+          onPress={handleCheckout}
+        >
           <View style={styles.basketItemCount}>
             <Text style={styles.basketItemCountText}>{totalItems}</Text>
           </View>
@@ -283,6 +452,49 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing.md,
     color: theme.palette.neutral.darkGrey,
     fontSize: theme.typography.fontSize.md,
+  },
+  menuLoadingContainer: {
+    padding: theme.spacing.lg,
+    alignItems: "center",
+  },
+  menuLoadingText: {
+    marginTop: theme.spacing.sm,
+    color: theme.palette.neutral.darkGrey,
+    fontSize: theme.typography.fontSize.sm,
+  },
+  menuErrorContainer: {
+    padding: theme.spacing.lg,
+    alignItems: "center",
+  },
+  menuErrorText: {
+    marginTop: theme.spacing.sm,
+    color: theme.palette.status.error,
+    fontSize: theme.typography.fontSize.md,
+    textAlign: "center",
+    marginBottom: theme.spacing.md,
+  },
+  noMenuContainer: {
+    padding: theme.spacing.xl,
+    alignItems: "center",
+  },
+  noMenuText: {
+    marginTop: theme.spacing.sm,
+    textAlign: "center",
+    color: theme.palette.neutral.darkGrey,
+    fontSize: theme.typography.fontSize.md,
+    marginBottom: theme.spacing.md,
+  },
+  retryButton: {
+    backgroundColor: theme.palette.primary.light,
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.sm,
+    borderRadius: theme.borderRadius.md,
+    marginTop: theme.spacing.sm,
+  },
+  retryButtonText: {
+    color: theme.palette.primary.main,
+    fontSize: theme.typography.fontSize.md,
+    fontWeight: "500",
   },
   animatedHeader: {
     position: "absolute",

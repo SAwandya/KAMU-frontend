@@ -112,6 +112,16 @@ const useAuth = () => {
       try {
         setState((prev) => ({ ...prev, isLoading: true, error: null }));
         const user = await authService.login({ email, password });
+
+        // Verify token was properly saved
+        const token = await SecureStore.getItemAsync("accessToken");
+        if (!token) {
+          console.error("Failed to save access token after login");
+          throw new Error("Authentication failed - token not saved");
+        } else {
+          console.log("✅ Token successfully saved after login");
+        }
+
         setState({
           user,
           isLoading: false,
@@ -121,6 +131,7 @@ const useAuth = () => {
         return true;
       } catch (error) {
         // Toast notification will be handled by the apiClient interceptor
+        console.error("Login error:", error);
         setState((prev) => ({
           ...prev,
           isLoading: false,

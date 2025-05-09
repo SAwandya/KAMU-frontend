@@ -117,9 +117,45 @@ apiClient.interceptors.request.use(
   async (config) => {
     // Get the access token from secure storage
     const token = await SecureStore.getItemAsync("accessToken");
+
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+      // Add logging for debugging token issues
+      if (enableNetworkLogging) {
+        console.log(
+          `🔑 Adding auth token to ${config.url} request (token length: ${token.length})`
+        );
+      }
+    } else {
+      // Log when we're making an authenticated request without a token
+      if (enableNetworkLogging) {
+        const isAuthEndpoint = config.url?.includes(apiConfig.endpoints.auth);
+        const isLoginEndpoint = isAuthEndpoint && config.url?.includes("login");
+        const isRegisterEndpoint =
+          isAuthEndpoint && config.url?.includes("register");
+
+        // Only log potential issues for endpoints that might need authorization
+        if (!isLoginEndpoint && !isRegisterEndpoint) {
+          console.warn(
+            `⚠️ No auth token available for request to ${config.url}`
+          );
+        }
+      }
     }
+
+    // Validate payload data for POST and PUT requests
+    if (
+      (config.method === "post" || config.method === "put") &&
+      config.data === null
+    ) {
+      console.warn(
+        "⚠️ Empty payload detected for",
+        config.url,
+        ". Setting to empty object to prevent null payload."
+      );
+      config.data = {};
+    }
+
     return config;
   },
   (error) => Promise.reject(error)
@@ -131,56 +167,152 @@ apiClient.interceptors.response.use(
   async (error: AxiosError) => {
     const originalRequest = error.config;
 
-    // If error is 401 Unauthorized and it's not a retry attempt
+    // Track failed attempts to prevent infinite loops
+    const retryCount = originalRequest?.headers?.["X-Retry-Count"]
+      ? parseInt(originalRequest.headers["X-Retry-Count"] as string)
+      : 0;
+
+    // If error is 401 Unauthorized and we haven't retried too many times
     if (
       error.response?.status === 401 &&
-      !originalRequest?.headers["X-Retry"]
+      retryCount < 2 &&
+      originalRequest?.url !== `${apiConfig.endpoints.auth}/refresh-token` // Avoid refresh loops
     ) {
-      // Try to refresh the token
+      console.log(
+        `🔄 Received 401 error (retry #${retryCount}), attempting token refresh...`
+      );
+
       try {
         const refreshToken = await SecureStore.getItemAsync("refreshToken");
 
-        if (refreshToken) {
-          // Call auth service to get a new token using the refresh token
-          const response = await axios.post(
-            `${API_URL}${apiConfig.endpoints.auth}/refresh-token`,
-            {
-              refreshToken,
-            }
-          );
+        if (!refreshToken) {
+          console.warn("🚫 No refresh token available");
+          throw new Error("No refresh token available");
+        }
 
-          const { accessToken, refreshToken: newRefreshToken } = response.data;
+        console.log(
+          "🔑 Found refresh token, attempting to get new access token"
+        );
 
-          // Store new tokens
-          await SecureStore.setItemAsync("accessToken", accessToken);
-          if (newRefreshToken) {
-            await SecureStore.setItemAsync("refreshToken", newRefreshToken);
-          }
+        // Call auth service to get a new token using the refresh token
+        const response = await axios.post(
+          `${API_URL}${apiConfig.endpoints.auth}/refresh-token`,
+          { refreshToken },
+          { timeout: 5000 } // Increase timeout for token refresh
+        );
 
-          // Retry original request with new token
-          if (originalRequest) {
-            originalRequest.headers["Authorization"] = `Bearer ${accessToken}`;
-            originalRequest.headers["X-Retry"] = "true";
-            return axios(originalRequest);
-          }
+        console.log("✅ Token refresh successful");
+
+        const { accessToken, refreshToken: newRefreshToken } = response.data;
+
+        // Store new tokens
+        await SecureStore.setItemAsync("accessToken", accessToken);
+        if (newRefreshToken) {
+          await SecureStore.setItemAsync("refreshToken", newRefreshToken);
+        }
+
+        // Retry original request with new token
+        if (originalRequest) {
+          console.log("🔄 Retrying original request with new token");
+          originalRequest.headers["Authorization"] = `Bearer ${accessToken}`;
+          // Increment retry count
+          originalRequest.headers["X-Retry-Count"] = (
+            retryCount + 1
+          ).toString();
+          return axios(originalRequest);
         }
       } catch (refreshError) {
-        // If refresh token is invalid, show error toast
-        if (showToastFunction) {
-          showToastFunction("Session expired. Please log in again.", "error");
-        }
+        console.error("❌ Token refresh failed:", refreshError);
 
-        // Clear stored tokens
+        // Don't immediately log out - only if it's a true auth failure (not network issue)
+        if (
+          refreshError.response &&
+          refreshError.response.status >= 400 &&
+          refreshError.response.status < 500
+        ) {
+          console.log("🔐 Authentication error confirmed, logging out user");
+
+          // If refresh token is invalid, show error toast
+          if (showToastFunction) {
+            showToastFunction("Session expired. Please log in again.", "error");
+          }
+
+          // Clear stored tokens
+          await SecureStore.deleteItemAsync("accessToken");
+          await SecureStore.deleteItemAsync("refreshToken");
+
+          // Redirect to login if needed
+          if (Platform.OS !== "web") {
+            // Use setTimeout to avoid navigation issues in the middle of an interceptor
+            setTimeout(() => {
+              // Import dynamically to avoid circular dependencies
+              const { router } = require("expo-router");
+              router.replace("/(auth)/login");
+            }, 500);
+          }
+        } else {
+          // For network errors or server errors, don't log out, just show an error toast
+          console.log(
+            "📶 Network or server error during token refresh, not logging out user"
+          );
+          if (showToastFunction) {
+            showToastFunction(
+              "Network error. Please check your connection.",
+              "error"
+            );
+          }
+        }
+      }
+    } else if (error.response?.status === 401 && retryCount >= 2) {
+      console.log("⚠️ Too many retry attempts, possible auth loop");
+      // Only log out if we're sure it's not a temporary network issue
+      if (
+        !error.message.includes("timeout") &&
+        !error.message.includes("Network Error")
+      ) {
+        // Clear tokens and redirect to login
         await SecureStore.deleteItemAsync("accessToken");
         await SecureStore.deleteItemAsync("refreshToken");
+
+        if (showToastFunction) {
+          showToastFunction(
+            "Authentication failed. Please log in again.",
+            "error"
+          );
+        }
+
+        if (Platform.OS !== "web") {
+          setTimeout(() => {
+            const { router } = require("expo-router");
+            router.replace("/(auth)/login");
+          }, 500);
+        }
       }
     }
 
     // For all other errors, show toast message if function is available
     if (showToastFunction) {
-      // Extract error message
-      const errorMessage = getErrorMessage(error);
-      showToastFunction(errorMessage, "error", 3000);
+      // Only show error toasts for server errors, not for network issues during regular usage
+      const isNetworkError =
+        error.message.includes("timeout") ||
+        error.message.includes("Network Error");
+
+      // If it's not a 401 unauthorized error (which we handled above)
+      if (error.response?.status !== 401) {
+        // Extract error message
+        const errorMessage = getErrorMessage(error);
+
+        // For network errors, show a different message based on the context
+        if (isNetworkError) {
+          showToastFunction(
+            "Network connection issue. Please check your internet connection.",
+            "error",
+            3000
+          );
+        } else {
+          showToastFunction(errorMessage, "error", 3000);
+        }
+      }
     }
 
     return Promise.reject(error);

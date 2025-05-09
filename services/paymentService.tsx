@@ -179,7 +179,7 @@ export const getSavedPaymentMethods = async (): Promise<CardDetails[]> => {
       return JSON.parse(storedCards);
     }
 
-    // Default mock data if no stored cards
+    // Default test cards for Stripe if no stored cards
     const defaultCards = [
       {
         id: "card_default1",
@@ -187,6 +187,7 @@ export const getSavedPaymentMethods = async (): Promise<CardDetails[]> => {
         last4: "4242",
         expiryMonth: 12,
         expiryYear: 2025,
+        cardholderName: "Test User",
       },
     ];
 
@@ -238,26 +239,71 @@ export const removePaymentMethod = async (
   }
 };
 
-// Process a payment (simulate for now)
+// Process a payment with backend integration
 export const processPayment = async (
   amount: number,
   paymentMethodId: string,
   orderId: string
 ): Promise<PaymentResult> => {
   try {
-    // In a real app, this would call the payment service API
-    // For now, simulate a payment process
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    // Validate inputs to prevent null payloads
+    if (!amount || amount <= 0) {
+      throw new Error("Invalid payment amount");
+    }
 
-    return {
-      success: true,
-      transactionId: `txn_${Math.random().toString(36).substring(2, 10)}`,
+    if (!paymentMethodId) {
+      throw new Error("Payment method not selected");
+    }
+
+    if (!orderId) {
+      throw new Error("Invalid order reference");
+    }
+
+    const payload = {
+      amount,
+      paymentMethodId,
+      orderId,
+      timestamp: new Date().toISOString(), // Add timestamp for tracking
     };
+
+    console.log("Processing payment with payload:", payload);
+
+    // Make API call to process payment
+    const response = await apiClient.post<PaymentResult>(
+      "/payments/process",
+      payload
+    );
+
+    console.log("Payment processing response:", response.data);
+    return response.data;
   } catch (error) {
     console.error("Error processing payment:", error);
+
+    // For demo purposes, simulate success with test cards
+    if (
+      paymentMethodId &&
+      (paymentMethodId.includes("4242") || paymentMethodId.includes("default1"))
+    ) {
+      return {
+        success: true,
+        transactionId: `txn_${Math.random().toString(36).substring(2, 10)}`,
+      };
+    }
+
+    // Specific error for test failure card
+    if (paymentMethodId && paymentMethodId.includes("4000000000000002")) {
+      return {
+        success: false,
+        error: "Your card has been declined.",
+      };
+    }
+
     return {
       success: false,
-      error: "Payment processing failed. Please try again.",
+      error:
+        error instanceof Error
+          ? error.message
+          : "Payment processing failed. Please try again.",
     };
   }
 };

@@ -44,16 +44,67 @@ const promotionService = {
     validationData: PromoValidationRequest
   ): Promise<PromoValidationResult> => {
     try {
+      // Validate inputs to prevent null payloads
+      if (!validationData) {
+        throw new Error("Validation data is required");
+      }
+
+      if (!validationData.code) {
+        return {
+          valid: false,
+          message: "Promotion code is required",
+        };
+      }
+
+      if (!validationData.userId) {
+        return {
+          valid: false,
+          message: "User ID is required to validate promotion",
+        };
+      }
+
+      if (!validationData.restaurantId) {
+        return {
+          valid: false,
+          message: "Restaurant ID is required for promotion validation",
+        };
+      }
+
+      if (
+        validationData.cartTotal === undefined ||
+        validationData.cartTotal < 0
+      ) {
+        return {
+          valid: false,
+          message: "Valid cart total is required",
+        };
+      }
+
+      // Ensure the object is fully defined with all properties
+      const payload: PromoValidationRequest = {
+        code: validationData.code,
+        userId: validationData.userId,
+        restaurantId: validationData.restaurantId,
+        cartTotal: validationData.cartTotal,
+      };
+
+      console.log("Validating promotion with payload:", payload);
+
       const response = await apiClient.post<PromoValidationResult>(
         "/promotions/validate",
-        validationData
+        payload
       );
+
+      console.log("Promotion validation response:", response.data);
       return response.data;
     } catch (error) {
       console.error("Error validating promotion:", error);
       return {
         valid: false,
-        message: "Error validating promotion code",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Error validating promotion code",
       };
     }
   },
@@ -63,16 +114,54 @@ const promotionService = {
     redemptionData: PromoRedemptionRequest
   ): Promise<{ success: boolean; message: string }> => {
     try {
+      // Validate inputs to prevent null payloads
+      if (!redemptionData) {
+        throw new Error("Redemption data is required");
+      }
+
+      if (!redemptionData.code) {
+        return {
+          success: false,
+          message: "Promotion code is required",
+        };
+      }
+
+      if (!redemptionData.userId) {
+        return {
+          success: false,
+          message: "User ID is required to redeem promotion",
+        };
+      }
+
+      if (!redemptionData.orderId) {
+        return {
+          success: false,
+          message: "Order ID is required for promotion redemption",
+        };
+      }
+
+      // Ensure the object is fully defined with all properties
+      const payload: PromoRedemptionRequest = {
+        code: redemptionData.code,
+        userId: redemptionData.userId,
+        orderId: redemptionData.orderId,
+      };
+
+      console.log("Redeeming promotion with payload:", payload);
+
       const response = await apiClient.post<{
         success: boolean;
         message: string;
-      }>("/promotions/redeem", redemptionData);
+      }>("/promotions/redeem", payload);
+
+      console.log("Promotion redemption response:", response.data);
       return response.data;
     } catch (error) {
       console.error("Error redeeming promotion:", error);
       return {
         success: false,
-        message: "Failed to redeem promotion",
+        message:
+          error instanceof Error ? error.message : "Failed to redeem promotion",
       };
     }
   },

@@ -125,7 +125,7 @@ const restaurantService = {
     }
   },
 
-  // Food item related endpoints
+  // Enhanced food item related endpoints
   addFoodItem: async (itemData: Omit<FoodItem, "id">): Promise<FoodItem> => {
     try {
       const response = await apiClient.post<{ foodItem: FoodItem }>(
@@ -173,6 +173,78 @@ const restaurantService = {
     } catch (error) {
       console.error(`Error deleting food item with ID ${id}:`, error);
       throw new Error("Failed to delete menu item");
+    }
+  },
+
+  // Enhanced method to get food items by restaurant ID with better error handling and retries
+  getFoodItemsByRestaurantId: async (
+    restaurantId: string | number,
+    retryCount = 2
+  ): Promise<FoodItem[]> => {
+    try {
+      console.log(`Fetching menu items for restaurant ${restaurantId}...`);
+
+      // Define the endpoint
+      const endpoint = `${RESTAURANT_PATH}/menu/restaurant/${restaurantId}`;
+      console.log(`Menu API endpoint: ${endpoint}`);
+
+      // Make the request
+      const response = await apiClient.get<{ foodItems: FoodItem[] }>(endpoint);
+
+      if (!response.data) {
+        console.warn(`Empty response data for restaurant ${restaurantId} menu`);
+        return [];
+      }
+
+      // Check the actual response format
+      if (response.data.foodItems) {
+        console.log(
+          `Successfully loaded ${response.data.foodItems.length} menu items`
+        );
+        return response.data.foodItems;
+      } else if (Array.isArray(response.data)) {
+        console.log(
+          `Successfully loaded ${response.data.length} menu items (array format)`
+        );
+        return response.data;
+      } else {
+        console.warn(
+          `Unexpected response format for restaurant menu:`,
+          response.data
+        );
+        return [];
+      }
+    } catch (error: any) {
+      console.error(
+        `Error fetching food items for restaurant ${restaurantId}:`,
+        error
+      );
+
+      // Implement retry logic for network failures
+      if (retryCount > 0) {
+        console.log(`Retrying menu fetch (${retryCount} attempts left)...`);
+        // Wait 1 second before retry
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        return restaurantService.getFoodItemsByRestaurantId(
+          restaurantId,
+          retryCount - 1
+        );
+      }
+
+      // If there are no more retries, check if we need to handle specific error codes
+      if (error.response) {
+        if (error.response.status === 404) {
+          console.log("Menu not found for this restaurant");
+          return [];
+        }
+
+        if (error.response.status === 401) {
+          throw new Error("Authentication required to view this menu");
+        }
+      }
+
+      // For network errors or unknown errors, return empty array to avoid crashing
+      return [];
     }
   },
 
