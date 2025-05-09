@@ -1,41 +1,154 @@
+// services/paymentService.tsx
+import apiClient from "./apiClient";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { PaymentResult, CardDetails } from "@/types/payment";
+import { PaymentMethod, CardDetails, PaymentResult } from "../types/payment";
 
-// Payment method constants
-export const PAYMENT_METHODS = {
-  CARD: "card",
-  CASH: "cash",
-  WALLET: "wallet",
+export interface PaymentIntent {
+  paymentIntentId: string;
+  clientSecret: string;
+  status: string;
+}
+
+export interface CheckoutSession {
+  sessionId: string;
+  url: string;
+}
+
+export interface PaymentData {
+  orderId: string | number;
+  customerId: string | number;
+  totalAmount: number;
+  items: Array<{
+    name: string;
+    description?: string;
+    price: number;
+    quantity: number;
+  }>;
+}
+
+export interface Payment {
+  id: string | number;
+  orderId: string | number;
+  stripePaymentIntentId: string;
+  amount: number;
+  currency: string;
+  status: string;
+  paymentMethod: string;
+  transactionId?: string;
+  metadata?: any;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PaymentLog {
+  id: string | number;
+  paymentId: string | number;
+  event: string;
+  data: any;
+  created_at: string;
+}
+
+export interface Refund {
+  id: string | number;
+  paymentId: string | number;
+  stripeRefundId: string;
+  amount: number;
+  reason: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// API integration methods
+export const createPaymentIntent = async (
+  paymentData: PaymentData
+): Promise<PaymentIntent> => {
+  try {
+    const response = await apiClient.post<PaymentIntent>(
+      "/payments/intent",
+      paymentData
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Error creating payment intent:", error);
+    throw new Error("Failed to create payment intent");
+  }
 };
 
-// Process payment with mock API
-export const processPayment = async (
-  amount: number,
-  paymentMethodId: string,
-  orderId: string
-): Promise<PaymentResult> => {
-  // Simulate API call with a delay
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      // Success rate of 90% for demo purposes
-      const isSuccessful = Math.random() > 0.1;
-
-      if (isSuccessful) {
-        resolve({
-          success: true,
-          transactionId: `txn_${Math.random().toString(36).substring(2, 15)}`,
-        });
-      } else {
-        resolve({
-          success: false,
-          error: "Payment processing failed. Please try again.",
-        });
-      }
-    }, 2000);
-  });
+export const createCheckoutSession = async (
+  paymentData: PaymentData
+): Promise<CheckoutSession> => {
+  try {
+    const response = await apiClient.post<CheckoutSession>(
+      "/payments/checkout",
+      paymentData
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Error creating checkout session:", error);
+    throw new Error("Failed to create checkout session");
+  }
 };
 
-// Save payment method to user preferences
+export const getPaymentByOrderId = async (
+  orderId: string | number
+): Promise<Payment> => {
+  try {
+    const response = await apiClient.get<Payment>(`/payments/order/${orderId}`);
+    return response.data;
+  } catch (error) {
+    console.error("Error getting payment for order:", error);
+    throw new Error("Failed to get payment information");
+  }
+};
+
+export const getPaymentLogs = async (
+  paymentId: string | number
+): Promise<PaymentLog[]> => {
+  try {
+    const response = await apiClient.get<PaymentLog[]>(
+      `/payments/${paymentId}/logs`
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Error getting payment logs:", error);
+    throw new Error("Failed to get payment logs");
+  }
+};
+
+export const getPaymentRefunds = async (
+  paymentId: string | number
+): Promise<Refund[]> => {
+  try {
+    const response = await apiClient.get<Refund[]>(
+      `/payments/${paymentId}/refunds`
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Error getting refunds:", error);
+    throw new Error("Failed to get refund information");
+  }
+};
+
+export const requestRefund = async (
+  paymentIntentId: string,
+  amount?: number,
+  reason?: string
+): Promise<Refund> => {
+  try {
+    const response = await apiClient.post<Refund>("/payments/refund", {
+      paymentIntentId,
+      amount,
+      reason,
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error requesting refund:", error);
+    throw new Error("Failed to process refund");
+  }
+};
+
+// Local storage methods for saved payment methods
 export const savePaymentMethod = async (method: string): Promise<void> => {
   try {
     await AsyncStorage.setItem("preferredPaymentMethod", method);
@@ -69,96 +182,82 @@ export const getSavedPaymentMethods = async (): Promise<CardDetails[]> => {
     // Default mock data if no stored cards
     const defaultCards = [
       {
-        id: "card_1",
+        id: "card_default1",
         type: "visa",
         last4: "4242",
         expiryMonth: 12,
-        expiryYear: 24,
-      },
-      {
-        id: "card_2",
-        type: "mastercard",
-        last4: "5555",
-        expiryMonth: 8,
-        expiryYear: 26,
+        expiryYear: 2025,
       },
     ];
 
-    // Save the default cards
+    // Save default cards for future use
     await AsyncStorage.setItem(
       "savedPaymentCards",
       JSON.stringify(defaultCards)
     );
-
     return defaultCards;
   } catch (error) {
-    console.error("Error fetching saved payment methods:", error);
+    console.error("Error getting saved payment methods:", error);
     return [];
   }
 };
 
-// Save a new card
-export const saveNewCard = async (
-  card: Omit<CardDetails, "id">
-): Promise<CardDetails> => {
+// Save a new payment method (card)
+export const saveNewPaymentMethod = async (
+  card: CardDetails
+): Promise<CardDetails[]> => {
   try {
-    const savedCards = await getSavedPaymentMethods();
+    const existingCards = await getSavedPaymentMethods();
+    const updatedCards = [...existingCards, card];
+    await AsyncStorage.setItem(
+      "savedPaymentCards",
+      JSON.stringify(updatedCards)
+    );
+    return updatedCards;
+  } catch (error) {
+    console.error("Error saving new payment method:", error);
+    throw new Error("Failed to save new payment method");
+  }
+};
 
-    // Create a new card with ID
-    const newCard: CardDetails = {
-      ...card,
-      id: `card_${Date.now()}`,
+// Remove a payment method (card)
+export const removePaymentMethod = async (
+  cardId: string
+): Promise<CardDetails[]> => {
+  try {
+    const existingCards = await getSavedPaymentMethods();
+    const updatedCards = existingCards.filter((card) => card.id !== cardId);
+    await AsyncStorage.setItem(
+      "savedPaymentCards",
+      JSON.stringify(updatedCards)
+    );
+    return updatedCards;
+  } catch (error) {
+    console.error("Error removing payment method:", error);
+    throw new Error("Failed to remove payment method");
+  }
+};
+
+// Process a payment (simulate for now)
+export const processPayment = async (
+  amount: number,
+  paymentMethodId: string,
+  orderId: string
+): Promise<PaymentResult> => {
+  try {
+    // In a real app, this would call the payment service API
+    // For now, simulate a payment process
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+
+    return {
+      success: true,
+      transactionId: `txn_${Math.random().toString(36).substring(2, 10)}`,
     };
-
-    // Add to saved cards
-    const updatedCards = [...savedCards, newCard];
-    await AsyncStorage.setItem(
-      "savedPaymentCards",
-      JSON.stringify(updatedCards)
-    );
-
-    return newCard;
   } catch (error) {
-    console.error("Error saving new card:", error);
-    throw new Error("Failed to save new card");
-  }
-};
-
-// Delete a saved card
-export const deleteCard = async (cardId: string): Promise<void> => {
-  try {
-    const savedCards = await getSavedPaymentMethods();
-    const updatedCards = savedCards.filter((card) => card.id !== cardId);
-    await AsyncStorage.setItem(
-      "savedPaymentCards",
-      JSON.stringify(updatedCards)
-    );
-  } catch (error) {
-    console.error("Error deleting card:", error);
-    throw new Error("Failed to delete card");
-  }
-};
-
-// Get wallet balance
-export const getWalletBalance = async (): Promise<number> => {
-  try {
-    const balance = await AsyncStorage.getItem("walletBalance");
-    return balance ? parseFloat(balance) : 50.0; // Default $50 balance for demo
-  } catch (error) {
-    console.error("Error getting wallet balance:", error);
-    return 50.0; // Default balance
-  }
-};
-
-// Add funds to wallet
-export const addFundsToWallet = async (amount: number): Promise<number> => {
-  try {
-    const currentBalance = await getWalletBalance();
-    const newBalance = currentBalance + amount;
-    await AsyncStorage.setItem("walletBalance", newBalance.toString());
-    return newBalance;
-  } catch (error) {
-    console.error("Error adding funds to wallet:", error);
-    throw new Error("Failed to add funds to wallet");
+    console.error("Error processing payment:", error);
+    return {
+      success: false,
+      error: "Payment processing failed. Please try again.",
+    };
   }
 };

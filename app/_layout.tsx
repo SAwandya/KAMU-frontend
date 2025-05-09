@@ -1,6 +1,11 @@
 // app/_layout.tsx
+import React from "react";
 import { Stack } from "expo-router";
 import { AuthProvider } from "../context/AuthContext";
+import { ToastProvider } from "../context/ToastContext";
+import ApiToastInitializer from "../components/ApiToastInitializer";
+import NetworkMonitor from "../components/Debug/NetworkMonitor";
+import ApiConnectionChecker from "../components/Debug/ApiConnectionChecker";
 import { useEffect } from "react";
 import * as SplashScreen from "expo-splash-screen";
 import { CartProvider } from "@/hooks/useCart";
@@ -38,36 +43,46 @@ export default function RootLayout() {
   }
 
   return (
-    <AuthProvider>
-      <CartProvider>
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            contentStyle: { backgroundColor: theme.palette.neutral.background },
-            animation: "fade",
-          }}
-        >
-          <Stack.Screen name="index" options={{ headerShown: false }} />
-          <Stack.Screen
-            name="(auth)"
-            options={{ headerShown: false, animation: "fade" }}
-          />
-          <Stack.Screen
-            name="(app)"
-            options={{ headerShown: false, animation: "fade" }}
-          />
-          <Stack.Screen
-            name="order-tracking"
-            options={{
-              headerShown: true, // Keep header for this screen for navigation
-              headerTransparent: true,
-              headerTitle: "", // Empty title for cleaner look
-              headerBackVisible: false,
-              headerTintColor: theme.palette.primary.main,
+    <ToastProvider>
+      <ApiToastInitializer />
+      <AuthProvider>
+        <CartProvider>
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              contentStyle: {
+                backgroundColor: theme.palette.neutral.background,
+              },
+              animation: "fade",
             }}
-          />
-        </Stack>
-      </CartProvider>
-    </AuthProvider>
+          >
+            <Stack.Screen name="index" options={{ title: "KAMU" }} />
+            <Stack.Screen
+              name="(auth)"
+              options={{ headerShown: false, animation: "fade" }}
+            />
+            <Stack.Screen
+              name="(app)"
+              options={{ headerShown: false, animation: "fade" }}
+            />
+            <Stack.Screen
+              name="order-tracking"
+              options={{
+                title: "Order Tracking",
+                headerShown: true, // Keep header for this screen for navigation
+                headerTransparent: true,
+                headerTitle: "", // Empty title for cleaner look
+                headerBackVisible: false,
+                headerTintColor: theme.palette.primary.main,
+              }}
+            />
+          </Stack>
+
+          {/* Debug tools for development only */}
+          <NetworkMonitor />
+          <ApiConnectionChecker />
+        </CartProvider>
+      </AuthProvider>
+    </ToastProvider>
   );
 }

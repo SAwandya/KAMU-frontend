@@ -15,7 +15,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import DishRow from "../../../components/DishRow/DishRow";
 import { Restaurant } from "../../../types";
-import { getRestaurantById } from "../../../services/restaurantService";
+import restaurantService from "../../../services/restaurantService";
 import { useCart } from "@/hooks/useCart";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import theme from "@/constants/Theme";
@@ -89,17 +89,19 @@ const RestaurantScreen = () => {
     const fetchRestaurant = async () => {
       try {
         setIsLoading(true);
-        const data = await getRestaurantById(id as string);
+        const data = await restaurantService.getRestaurantById(id as string);
 
         // Enhance restaurant data with local image sources
         if (data) {
           const enhancedData = {
             ...data,
             imageSource: restaurantImages[data.id] || null,
-            dishes: data.dishes.map((dish) => ({
-              ...dish,
-              imageSource: dishImages[dish.id] || null,
-            })),
+            dishes: data.dishes
+              ? data.dishes.map((dish) => ({
+                  ...dish,
+                  imageSource: dishImages[dish.id] || null,
+                }))
+              : [],
           };
           setRestaurant(enhancedData);
         }
