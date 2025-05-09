@@ -35,7 +35,7 @@ export const useRestaurant = () => {
   const getRestaurantById = useCallback(async (id: string | number) => {
     setState((prev) => ({ ...prev, loading: true, error: null }));
     try {
-      const restaurant = await restaurantService.getMyRestaurant();
+      const restaurant = await restaurantService.getRestaurantById(id);
       setState((prev) => ({ ...prev, restaurant, loading: false }));
       return restaurant;
     } catch (error) {
