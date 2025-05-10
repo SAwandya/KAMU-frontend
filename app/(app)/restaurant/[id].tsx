@@ -15,7 +15,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import DishRow from "../../../components/DishRow/DishRow";
 import { Restaurant } from "../../../types";
-import { getRestaurantById } from "../../../services/restaurantService";
+import restaurantService from "../../../services/restaurantService";
 import { useCart } from "@/hooks/useCart";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import theme from "@/constants/Theme";
@@ -85,6 +85,63 @@ const RestaurantScreen = () => {
     }
   };
 
+  useEffect(() => {
+    if (!id) return;
+
+    const fetchRestaurant = async () => {
+      try {
+        const data = await restaurantService.getRestaurantById(id);
+        const rawRestaurant = data.restaurant;
+
+        let images: string[] = [];
+        try {
+          images = JSON.parse(rawRestaurant.images.replace(/'/g, '"'));
+        } catch (e) {
+          console.warn("Invalid image format:", rawRestaurant.images);
+        }
+
+        const enhancedRestaurant = {
+          ...rawRestaurant,
+          imageSource: restaurantImages[rawRestaurant.id] || {
+            uri: images[0] || "https://via.placeholder.com/300",
+          },
+          image: images[0] || "https://via.placeholder.com/300",
+          rating: 4.5,
+          category: "Grill",
+          deliveryTime: 30,
+          description: "A delicious place for spicy grilled dishes and more.",
+          dishes: [
+            {
+              id: "d1",
+              name: "Spicy Chicken",
+              description: "Hot grilled chicken with spices",
+              price: 12.99,
+              image: "https://via.placeholder.com/150",
+              imageSource: dishImages.d1,
+            },
+            {
+              id: "d2",
+              name: "Grilled Lamb",
+              description: "Tender lamb grilled to perfection",
+              price: 15.49,
+              image: "https://via.placeholder.com/150",
+              imageSource: dishImages.d2,
+            },
+          ],
+        };
+
+        setRestaurant(enhancedRestaurant);
+      } catch (err: any) {
+        setError(err.message || "Failed to fetch restaurant");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRestaurant();
+  }, [id]);
+  
+
   // useEffect(() => {
   //   const fetchRestaurant = async () => {
   //     try {
@@ -113,14 +170,14 @@ const RestaurantScreen = () => {
   //   fetchRestaurant();
   // }, [id]);
 
-  if (isLoading || !restaurant) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={theme.palette.primary.main} />
-        <Text style={styles.loadingText}>Loading restaurant details...</Text>
-      </View>
-    );
-  }
+  // if (isLoading || !restaurant) {
+  //   return (
+  //     <View style={styles.loadingContainer}>
+  //       <ActivityIndicator size="large" color={theme.palette.primary.main} />
+  //       <Text style={styles.loadingText}>Loading restaurant details...</Text>
+  //     </View>
+  //   );
+  // }
 
   return (
     <View style={styles.container}>
@@ -140,7 +197,7 @@ const RestaurantScreen = () => {
             color={theme.palette.neutral.white}
           />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>{restaurant.name}</Text>
+        <Text style={styles.headerTitle}>{restaurant?.name}</Text>
         <TouchableOpacity style={styles.heartButton}>
           <Ionicons
             name="heart-outline"
@@ -168,7 +225,7 @@ const RestaurantScreen = () => {
           ]}
         >
           <Image
-            source={restaurant.imageSource || { uri: restaurant.image }}
+            source={restaurant?.imageSource || { uri: restaurant?.image }}
             style={styles.image}
             resizeMode="cover"
           />
@@ -195,16 +252,16 @@ const RestaurantScreen = () => {
 
         <View style={styles.detailsCard}>
           <View style={styles.restaurantDetails}>
-            <Text style={styles.restaurantName}>{restaurant.name}</Text>
+            <Text style={styles.restaurantName}>{restaurant?.name}</Text>
 
             <View style={styles.statsContainer}>
               <View style={styles.statItem}>
                 <Ionicons name="star" size={18} color="#FFD700" />
-                <Text style={styles.statText}>{restaurant.rating}</Text>
+                <Text style={styles.statText}>{restaurant?.rating}</Text>
               </View>
               <View style={styles.statDivider} />
               <View style={styles.statItem}>
-                <Text style={styles.categoryText}>{restaurant.category}</Text>
+                <Text style={styles.categoryText}>{restaurant?.category}</Text>
               </View>
               <View style={styles.statDivider} />
               <View style={styles.statItem}>
@@ -214,7 +271,7 @@ const RestaurantScreen = () => {
                   color={theme.palette.neutral.darkGrey}
                 />
                 <Text style={styles.statText}>
-                  {restaurant.deliveryTime} min
+                  {restaurant?.deliveryTime} min
                 </Text>
               </View>
             </View>
@@ -225,10 +282,10 @@ const RestaurantScreen = () => {
                 size={18}
                 color={theme.palette.neutral.darkGrey}
               />
-              <Text style={styles.addressText}>{restaurant.address}</Text>
+              <Text style={styles.addressText}>{restaurant?.address}</Text>
             </View>
 
-            <Text style={styles.description}>{restaurant.description}</Text>
+            <Text style={styles.description}>{restaurant?.description}</Text>
           </View>
 
           <View style={styles.menuHeader}>
@@ -236,8 +293,8 @@ const RestaurantScreen = () => {
             <View style={styles.divider} />
           </View>
 
-          {restaurant.dishes &&
-            restaurant.dishes.map((dish) => (
+          {restaurant?.dishes &&
+            restaurant?.dishes.map((dish) => (
               <DishRow
                 key={dish.id}
                 dish={{
