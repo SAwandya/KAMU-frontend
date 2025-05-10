@@ -42,6 +42,8 @@ export default function Register() {
     try {
       setError("");
       setIsSubmitting(true);
+      console.log("Registering user:", name, email, password);
+
       await signUp(name, email, password);
     } catch (error) {
       setError("Registration failed. Please try again.");

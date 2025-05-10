@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
+import authService from "@/services/authService";
 
 // Define the user type
 type User = {
@@ -53,16 +54,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // In a real app, you would make an API call to your backend
       // For now, we'll simulate a successful login
-      const mockUser: User = {
-        id: "1",
-        name: "John Doe",
-        email: email,
-        role: "customer",
-      };
+      // const mockUser: User = {
+      //   id: "1",
+      //   name: "John Doe",
+      //   email: email,
+      //   role: "customer",
+      // };
+
+      const res = authService.login({ email, password })
 
       // Save user to storage
-      await AsyncStorage.setItem("user", JSON.stringify(mockUser));
-      setUser(mockUser);
+      await AsyncStorage.setItem("user", JSON.stringify(res));
+      setUser(res);
 
       // Navigate to the main app
       router.replace("/(app)");
@@ -75,22 +78,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   // Sign up function
-  const signUp = async (name: string, email: string, password: string) => {
+  const signUp = async (fullName: string, email: string, password: string) => {
     try {
       setIsLoading(true);
 
       // In a real app, you would make an API call to your backend
       // For now, we'll simulate a successful registration
-      const mockUser: User = {
-        id: "1",
-        name: name,
-        email: email,
-        role: "customer",
-      };
+      // const mockUser: User = {
+      //   id: "1",
+      //   name: name,
+      //   email: email,
+      //   role: "customer",
+      // };
+
+      const res = authService.register({ fullName, email, password, role: "customer" });
+
+      console.log(res);
 
       // Save user to storage
-      await AsyncStorage.setItem("user", JSON.stringify(mockUser));
-      setUser(mockUser);
+      await AsyncStorage.setItem("user", JSON.stringify(res));
+      setUser(res);
 
       // Navigate to the main app
       router.replace("/(app)");

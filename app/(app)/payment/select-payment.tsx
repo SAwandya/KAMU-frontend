@@ -19,6 +19,8 @@ import CreditCardItemNew from "@/components/Payment/CreditCardItemNew";
 import { usePaymentStore } from "@/store/paymentStore";
 import { PAYMENT_METHODS, getWalletBalance } from "@/services/paymentService";
 
+import { createPaymentIntent } from "@/services/stripePaymentService";
+
 export default function SelectPaymentScreen() {
   const router = useRouter();
   const { totalAmount, restaurantId, items } = useLocalSearchParams();
@@ -71,48 +73,75 @@ export default function SelectPaymentScreen() {
     setPreferredMethod(PAYMENT_METHODS.CARD);
   };
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     if (!preferredMethod) {
       Alert.alert("Error", "Please select a payment method");
       return;
     }
-    if (
-      preferredMethod === PAYMENT_METHODS.CARD &&
-      !selectedCardId &&
-      savedCards.length > 0
-    ) {
-      Alert.alert("Error", "Please select a card");
-      return;
-    }
-    if (
-      preferredMethod === PAYMENT_METHODS.WALLET &&
-      walletBalance < Number(totalAmount) * 0.8
-    ) {
-      Alert.alert(
-        "Insufficient Balance",
-        `Your wallet balance ($${walletBalance.toFixed(
-          2
-        )}) is insufficient for this order. Please add funds or select another payment method.`,
-        [
-          {
-            text: "Add Funds",
-            onPress: () => router.push("/account/add-funds"),
-          },
-          { text: "Change Method", style: "cancel" },
-        ]
+
+    if (preferredMethod === PAYMENT_METHODS.CARD) {
+      if (!selectedCardId) {
+        Alert.alert("Error", "Please select a card");
+        return;
+      }
+
+      const selectedCard = savedCards.find(
+        (card) => card.id === selectedCardId
       );
-      return;
+      if (!selectedCard) {
+        Alert.alert("Error", "Selected card not found");
+        return;
+      }
+
+      try {
+        setIsLoading(true);
+
+        // Replace with actual orderId and customerId from context or store
+        const orderId = 3;
+        const customerId = "cus_test_customer"; // Replace with real customer ID
+
+        console.log("Creating payment intent with data:", {
+          orderId,
+          customerId,
+          totalAmount: parseFloat(totalAmount as string),
+          items: parsedItems,
+        });
+
+        const response = await createPaymentIntent({
+          orderId,
+          customerId,
+          totalAmount: parseFloat(totalAmount as string),
+          items: parsedItems,
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result.error || "Failed to create payment");
+        }
+
+        // Simulate success/failure depending on result.status
+        if (result.status === "succeeded") {
+          Alert.alert("Payment Successful", "Your order has been placed!", [
+            {
+              text: "OK",
+              onPress: () => router.push("/confirmation"), // Navigate to success screen
+            },
+          ]);
+        } else {
+          Alert.alert("Payment Pending", "Your payment is still processing.");
+        }
+      } catch (error: any) {
+        Alert.alert(
+          "Payment Failed",
+          error.message || "An unexpected error occurred"
+        );
+      } finally {
+        setIsLoading(false);
+      }
     }
-    router.push({
-      pathname: "/payment/process",
-      params: {
-        totalAmount: (Number(totalAmount) * 0.8).toFixed(2),
-        paymentMethod: preferredMethod,
-        paymentMethodId: selectedCardId || "",
-        restaurantId,
-        items: typeof items === "string" ? items : JSON.stringify(items),
-      },
-    });
+
+    // You can implement wallet or other methods here as well
   };
 
   const handleAddNewCard = () => {

@@ -12,6 +12,8 @@ import {
   Poppins_600SemiBold,
   Poppins_700Bold,
 } from "@expo-google-fonts/poppins";
+import { StripeProvider } from "@stripe/stripe-react-native";
+
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
@@ -38,36 +40,40 @@ export default function RootLayout() {
   }
 
   return (
-    <AuthProvider>
-      <CartProvider>
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            contentStyle: { backgroundColor: theme.palette.neutral.background },
-            animation: "fade",
-          }}
-        >
-          <Stack.Screen name="index" options={{ headerShown: false }} />
-          <Stack.Screen
-            name="(auth)"
-            options={{ headerShown: false, animation: "fade" }}
-          />
-          <Stack.Screen
-            name="(app)"
-            options={{ headerShown: false, animation: "fade" }}
-          />
-          <Stack.Screen
-            name="order-tracking"
-            options={{
-              headerShown: true, // Keep header for this screen for navigation
-              headerTransparent: true,
-              headerTitle: "", // Empty title for cleaner look
-              headerBackVisible: false,
-              headerTintColor: theme.palette.primary.main,
+    <StripeProvider publishableKey="pk_test_TYooMQauvdEDq54NiTphI7jx">
+      <AuthProvider>
+        <CartProvider>
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              contentStyle: {
+                backgroundColor: theme.palette.neutral.background,
+              },
+              animation: "fade",
             }}
-          />
-        </Stack>
-      </CartProvider>
-    </AuthProvider>
+          >
+            <Stack.Screen name="index" options={{ headerShown: false }} />
+            <Stack.Screen
+              name="(auth)"
+              options={{ headerShown: false, animation: "fade" }}
+            />
+            <Stack.Screen
+              name="(app)"
+              options={{ headerShown: false, animation: "fade" }}
+            />
+            <Stack.Screen
+              name="order-tracking"
+              options={{
+                headerShown: true, // Keep header for this screen for navigation
+                headerTransparent: true,
+                headerTitle: "", // Empty title for cleaner look
+                headerBackVisible: false,
+                headerTintColor: theme.palette.primary.main,
+              }}
+            />
+          </Stack>
+        </CartProvider>
+      </AuthProvider>
+    </StripeProvider>
   );
 }

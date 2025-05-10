@@ -6,7 +6,7 @@ import * as SecureStore from "expo-secure-store";
 
 // Get API URL from environment variables or constants
 const API_URL =
-  Constants.expoConfig?.extra?.apiUrl || "http://192.168.241.187:80/api";
+  Constants.expoConfig?.extra?.apiUrl || "http://192.168.100.122:80/api";
 
 // Create axios instance with default config
 const apiClient = axios.create({
@@ -22,7 +22,7 @@ const apiClient = axios.create({
 apiClient.interceptors.request.use(
   async (config) => {
     // You can add auth token here
-    const token = await SecureStore.getItemAsync("token");
+    const token = await SecureStore.getItemAsync("accessToken");
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
