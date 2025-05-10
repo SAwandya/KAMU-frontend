@@ -13,6 +13,8 @@ import { processPayment, PAYMENT_METHODS } from "@/services/paymentService";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useCart } from "@/hooks/useCart";
 import PaymentStatusIndicator from "@/components/Payment/PaymentStatusIndicator";
+import { useStripe } from "@stripe/stripe-react-native";
+import { usePaymentStore } from "@/store/paymentStore";
 
 const PaymentProcessingScreen = () => {
   const router = useRouter();
