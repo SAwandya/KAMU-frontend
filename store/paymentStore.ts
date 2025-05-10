@@ -1,6 +1,6 @@
-// store/paymentStore.ts
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { persist, createJSONStorage } from "zustand/middleware"; // ✅ include createJSONStorage
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export type Card = {
   id: string;
@@ -29,6 +29,9 @@ export const usePaymentStore = create<PaymentState>()(
         })),
       setSelectedCardId: (id) => set({ selectedCardId: id }),
     }),
-    { name: "payment-store" }
+    {
+      name: "payment-store",
+      storage: createJSONStorage(() => AsyncStorage), // ✅ Wrap it properly
+    }
   )
 );
