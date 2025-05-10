@@ -29,6 +29,10 @@ const authService = {
     );
     const { user, accessToken , refreshToken } = response.data;
 
+    console.log("User data:", user);
+    console.log("Access token:", accessToken);
+    console.log("Refresh token:", refreshToken);
+
     // Save tokens securely
     await SecureStore.setItemAsync("accessToken", accessToken);
     await SecureStore.setItemAsync("refreshToken", refreshToken);
@@ -38,13 +42,14 @@ const authService = {
 
   register: async (
     userData: {
-      username: string;
+      fullName: string;
       email: string;
       password: string;
+      role: string;
     } & LoginCredentials
   ) => {
     const response = await apiClient.post<{ user: User; token: string }>(
-      "/auth/register",
+      "/auth/register/customer",
       userData
     );
     return response.data;

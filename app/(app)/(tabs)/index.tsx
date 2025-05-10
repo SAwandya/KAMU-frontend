@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -27,6 +27,8 @@ import { restaurants } from "@/assets/data/restaurants";
 import { categories } from "@/assets/data/categories";
 import { deliveryOptions } from "@/assets/data/deliveryOptions";
 import { offers } from "@/assets/data/offers";
+import { useRestaurants } from "@/hooks/useRestaurant";
+import restaurantService from "@/services/restaurantService";
 
 const { width } = Dimensions.get("window");
 
@@ -37,6 +39,27 @@ export default function HomeScreen() {
   const [activeCategory, setActiveCategory] = useState("1");
   const scrollRef = useRef(null);
   const scrollY = useSharedValue(0);
+
+  const [restaurantData, setRestaurantData] = useState<Restaurant[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchRestaurants = async () => {
+      try {
+        const data = await restaurantService.getAllRestaurants();
+        setRestaurantData(data.restaurants);
+      } catch (err: any) {
+        setError(err.message || "Failed to fetch restaurants");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRestaurants();
+  }, []);
+
+  console.log("Restaurant data:", restaurantData);
 
   const handleScroll = (event) => {
     scrollY.value = event.nativeEvent.contentOffset.y;
@@ -229,7 +252,7 @@ export default function HomeScreen() {
         </View>
 
         <View style={styles.restaurantsContainer}>
-          {restaurants.map((restaurant, index) => (
+          {restaurantData.map((restaurant, index) => (
             <Animated.View
               key={restaurant.id}
               entering={FadeInUp.delay(index * 100).springify()}

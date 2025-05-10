@@ -31,7 +31,7 @@ export default function Login() {
       setError("Please fill in all fields");
       return;
     }
-
+  
     try {
       setError("");
       setIsSubmitting(true);

@@ -85,33 +85,33 @@ const RestaurantScreen = () => {
     }
   };
 
-  useEffect(() => {
-    const fetchRestaurant = async () => {
-      try {
-        setIsLoading(true);
-        const data = await getRestaurantById(id as string);
+  // useEffect(() => {
+  //   const fetchRestaurant = async () => {
+  //     try {
+  //       setIsLoading(true);
+  //       const data = await getRestaurantById(id as string);
 
-        // Enhance restaurant data with local image sources
-        if (data) {
-          const enhancedData = {
-            ...data,
-            imageSource: restaurantImages[data.id] || null,
-            dishes: data.dishes.map((dish) => ({
-              ...dish,
-              imageSource: dishImages[dish.id] || null,
-            })),
-          };
-          setRestaurant(enhancedData);
-        }
-      } catch (error) {
-        console.error("Error fetching restaurant:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  //       // Enhance restaurant data with local image sources
+  //       if (data) {
+  //         const enhancedData = {
+  //           ...data,
+  //           imageSource: restaurantImages[data.id] || null,
+  //           dishes: data.dishes.map((dish) => ({
+  //             ...dish,
+  //             imageSource: dishImages[dish.id] || null,
+  //           })),
+  //         };
+  //         setRestaurant(enhancedData);
+  //       }
+  //     } catch (error) {
+  //       console.error("Error fetching restaurant:", error);
+  //     } finally {
+  //       setIsLoading(false);
+  //     }
+  //   };
 
-    fetchRestaurant();
-  }, [id]);
+  //   fetchRestaurant();
+  // }, [id]);
 
   if (isLoading || !restaurant) {
     return (
