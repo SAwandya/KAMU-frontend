@@ -21,6 +21,9 @@ import { PAYMENT_METHODS, getWalletBalance } from "@/services/paymentService";
 
 import { createPaymentIntent } from "@/services/stripePaymentService";
 
+import { confirmPayment } from "@stripe/stripe-react-native";
+import { useAuth } from "@/context/AuthContext";
+
 export default function SelectPaymentScreen() {
   const router = useRouter();
   const { totalAmount, restaurantId, items } = useLocalSearchParams();
@@ -33,6 +36,8 @@ export default function SelectPaymentScreen() {
   const savedCards = usePaymentStore((state) => state.savedCards);
   const selectedCardId = usePaymentStore((state) => state.selectedCardId);
   const setSelectedCardId = usePaymentStore((state) => state.setSelectedCardId);
+
+  const { user } = useAuth();
 
   // Local state for preferred payment method
   const [preferredMethod, setPreferredMethod] = useState<string | null>(null);
@@ -79,6 +84,8 @@ export default function SelectPaymentScreen() {
       return;
     }
 
+    console.log("Current User:", user._j.email);
+
     if (preferredMethod === PAYMENT_METHODS.CARD) {
       if (!selectedCardId) {
         Alert.alert("Error", "Please select a card");
@@ -114,23 +121,20 @@ export default function SelectPaymentScreen() {
           items: parsedItems,
         });
 
-        const result = await response.json();
-
-        if (!response.ok) {
-          throw new Error(result.error || "Failed to create payment");
-        }
-
-        // Simulate success/failure depending on result.status
-        if (result.status === "succeeded") {
-          Alert.alert("Payment Successful", "Your order has been placed!", [
-            {
-              text: "OK",
-              onPress: () => router.push("/confirmation"), // Navigate to success screen
-            },
-          ]);
+        if (!response) {
+          throw new Error("Failed to create payment");
         } else {
-          Alert.alert("Payment Pending", "Your payment is still processing.");
+          const { error, paymentIntent } = await confirmPayment(
+            response.clientSecret,
+            {
+              paymentMethodType: "Card",
+              paymentMethodId: "your_saved_payment_method_id", // from Stripe saved card
+            }
+          );
         }
+
+        Alert.alert("Success", "Payment successful!");
+        router.push("/payment/process");
       } catch (error: any) {
         Alert.alert(
           "Payment Failed",

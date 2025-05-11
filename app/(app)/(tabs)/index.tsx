@@ -44,11 +44,35 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
+  // useEffect(() => {
+  //   const fetchRestaurants = async () => {
+  //     try {
+  //       const data = await restaurantService.getAllRestaurants();
+  //       setRestaurantData(data.restaurants);
+  //     } catch (err: any) {
+  //       setError(err.message || "Failed to fetch restaurants");
+  //     } finally {
+  //       setLoading(false);
+  //     }
+  //   };
+
+  //   fetchRestaurants();
+  // }, []);
+
   useEffect(() => {
     const fetchRestaurants = async () => {
       try {
         const data = await restaurantService.getAllRestaurants();
-        setRestaurantData(data.restaurants);
+        const formattedRestaurants = data.restaurants.map((r) => ({
+          ...r,
+          imageSource: {
+            uri: JSON.parse(r.images.replace(/'/g, '"'))[0], // Fixes single quotes and parses
+          },
+          rating: 4.5, // Add default or actual value if available
+          category: "Sri Lankan", // Add a placeholder or real data
+          deliveryTime: 30, // Same here
+        }));
+        setRestaurantData(formattedRestaurants);
       } catch (err: any) {
         setError(err.message || "Failed to fetch restaurants");
       } finally {
