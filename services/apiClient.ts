@@ -23,6 +23,7 @@ apiClient.interceptors.request.use(
   async (config) => {
     // You can add auth token here
     const token = await SecureStore.getItemAsync("accessToken");
+    console.log("Token from SecureStore:", token);
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }

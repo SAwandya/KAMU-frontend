@@ -35,6 +35,7 @@ export default function Login() {
     try {
       setError("");
       setIsSubmitting(true);
+      console.log("Logging in with email:", email, "and password:", password);
       await signIn(email, password);
     } catch (error) {
       setError("Invalid email or password");
