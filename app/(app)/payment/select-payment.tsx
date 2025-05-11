@@ -23,6 +23,7 @@ import { createPaymentIntent } from "@/services/stripePaymentService";
 
 import { confirmPayment } from "@stripe/stripe-react-native";
 import { useAuth } from "@/context/AuthContext";
+import { sendSms } from "@/services/notificationService";
 
 export default function SelectPaymentScreen() {
   const router = useRouter();
@@ -84,7 +85,6 @@ export default function SelectPaymentScreen() {
       return;
     }
 
-    console.log("Current User:", user._j.email);
 
     if (preferredMethod === PAYMENT_METHODS.CARD) {
       if (!selectedCardId) {
@@ -133,7 +133,14 @@ export default function SelectPaymentScreen() {
           );
         }
 
+        const result = await sendSms({
+          to: "sachilaawandya@gmail.com",
+          subject: "Order Confirmation",
+          text: `Hi there! 🎉 Your order ${orderId} has been received. Total: $${totalAmount}. We'll notify you when it's on the way. Thanks for ordering with us!`,
+        });
+
         Alert.alert("Success", "Payment successful!");
+
         router.push("/payment/process");
       } catch (error: any) {
         Alert.alert(
